@@ -43,7 +43,7 @@ class AtomArray:
             for j in range(0, sites_per_row):
                 self.qubits.append({
                     "position": (i*row_spacing, j*site_spacing),
-                    "state": PROG_EPSILON
+                    "state": complex(PROG_EPSILON, PROG_EPSILON)
                 })
     
     def prepare_qubits(self, target_qubits=[], initial_states=[]):
@@ -52,8 +52,12 @@ class AtomArray:
             qubit_list = [q for q in range(self.n_qubits)]
 
         for q in qubit_list:
+            initial_state_raw = initial_states[q]
+
             # @TODO - incorporate State Preparation error
-            self.qubits[q].prepare(initial_states[q])
+            initial_state = initial_state_raw
+
+            self.qubits[q].state = initial_state
 
     def measure_all(self):
         return NotImplemented

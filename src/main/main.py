@@ -2,6 +2,8 @@ from common.logging import *
 
 from common.gui import load_gui
 
+from common.data_structures import Experiment
+
 def main():
     log("INFO", "Running main process")
     

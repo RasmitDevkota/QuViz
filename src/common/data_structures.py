@@ -12,6 +12,8 @@ class Experiment:
     def __init__(self):
         self.n_qubits = 1
         self.qubits = np.zeros((1, self.n_qubits), dtype=complex)
+
+        self.circuit = []
     
     def add_qubit(self, index=-1):
         self.n_qubits += 1
@@ -25,13 +27,25 @@ class Experiment:
         return NotImplemented
     
     def circuit_to_qasm(self):
-        return NotImplemented
+        # Base string
+        circuit_qasm_str = f"OPENQASM 3;\n\ninclude \"stdgates.inc\";\n\n"
+
+        # Declare qubits
+        circuit_qasm_str = f"qubit[{self.n_qubits}] qr;\n\n"
+
+        # Append operations
+        for operation in self.circuit:
+            gate = operation[0].lower()
+            qubits = "], qr[".join([str(qubit) for qubit in operation[1:]])
+
+            circuit_qasm_str += f"{gate} qr[{qubits}];\n"
+
+        return circuit_qasm_str
 
 class AtomArray:
     def __init__(self, n_rows=16, sites_per_row=16, row_spacing=4, site_spacing=4):
         # @TODO - load/store the other important variables that the user can give us
 
-        # @TODO - allow for non-rectangular grid parameters
         self.n_rows = n_rows
         self.sites_per_row = sites_per_row
         self.n_qubits = n_rows * sites_per_row
@@ -43,17 +57,15 @@ class AtomArray:
         for i in range(0, n_rows):
             for j in range(0, sites_per_row):
                 self.qubits.append({
-                    "position": (np.random.uniform(0,j*site_spacing), np.random.uniform(0,i*row_spacing)),
+                    "position": (np.random.uniform(0, j*site_spacing), np.random.uniform(0, i*row_spacing)),
                     "state": np.array([1+0j, 1+0j])/np.sqrt(2)
                 })
     
     def prepare_qubit_positions(self, target_qubits=[], initial_positions=[]):
-        if len(target_qubits) == 0:
-            # Prepare all qubits
+        if len(target_qubits) == 0 or len(initial_positions) == 0:
+            # Prepare all qubits in a rectangular grid
             target_qubits = [q for q in range(self.n_qubits)]
-        
-        if len(initial_positions) == 0:
-            # All start in a rectangular grid
+
             for i in range(0, self.n_rows):
                 for j in range(0, self.sites_per_row):
                     position_row = i * self.row_spacing
@@ -85,12 +97,53 @@ class AtomArray:
         for q in target_qubits:
             initial_state_raw = initial_states[q]
 
-            # @TODO - incorporate State Preparation error
+            # @TODO - incorporate state preparation error
             initial_state = initial_state_raw
 
             self.qubits[q].state = initial_state
         
         return True
+    
+    def transport_qubits(self, target_qubits=[], destinations=[]):
+        if len(target_qubits) == 0:
+            # Prepare all qubits
+            target_qubits = [q for q in range(self.n_qubits)]
+        
+        if len(destinations) == 0:
+            # Destinations must be specified!
+            return False
+
+        return True
+    
+    def H(self, target_qubits):
+        return NotImplemented
+    
+    def RotX(self, target_qubits):
+        return NotImplemented
+    
+    def RotY(self, target_qubits):
+        return NotImplemented
+    
+    def RotZ(self, target_qubits):
+        return NotImplemented
+    
+    def PauliX(self, target_qubits):
+        return NotImplemented
+    
+    def PauliY(self, target_qubits):
+        return NotImplemented
+    
+    def PauliZ(self, target_qubits):
+        return NotImplemented
+    
+    def CX(self, target_qubits):
+        return NotImplemented
+    
+    def CY(self, target_qubits):
+        return NotImplemented
+    
+    def CZ(self, target_qubits):
+        return NotImplemented
 
     def measure_all(self):
         return NotImplemented

@@ -9,7 +9,4 @@ def log(label, message):
         if not log_label[label]:
             return
     
-    print(f"! {label}: {message}")
-
-def log_info(message):
-    return log("INFO", message)
+    print(f"! {label} > {message}")

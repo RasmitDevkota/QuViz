@@ -46,6 +46,7 @@ class AtomArray:
     def __init__(self, n_rows=16, sites_per_row=16, row_spacing=4, site_spacing=4):
         # @TODO - load/store the other important variables that the user can give us
 
+        # initial position parameters
         self.n_rows = n_rows
         self.sites_per_row = sites_per_row
         self.n_qubits = n_rows * sites_per_row
@@ -112,6 +113,11 @@ class AtomArray:
         if len(destinations) == 0:
             # Destinations must be specified!
             return False
+        
+        for tq, target_qubit in enumerate(target_qubits):
+            destination = destinations[tq]
+
+            
 
         return True
     

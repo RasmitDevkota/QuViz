@@ -1,69 +1,30 @@
 import numpy as np
 import random
 
-class Experiment:
-    """
-    Experiments are the primary product of the initialization stage,
-    composed of (i) the circuit to be run and (ii) experiment parameters,
-    such as atom array options and performance metrics
-    """
+from experiment import Experiment
+from gui import GUI
 
-    def __init__(self):
-        self.n_qubits = 1
-        self.qubits = np.zeros((1, self.n_qubits), dtype=complex)
-
-        self.circuit = []
-
-        self.performance_metrics = {}
-    
-    def add_qubit(self, index=-1):
-        self.n_qubits += 1
-
-        if index == -1:
-            self.qubits = np.append(self.qubits, 0)
-        else:
-            self.qubits = np.insert(self.qubits, index, 0)
-    
-    def qasm_to_circuit(self):
-        return NotImplemented
-    
-    def circuit_to_qasm(self):
-        # Base string
-        circuit_qasm_str = f"OPENQASM 3;\n\ninclude \"stdgates.inc\";\n\n"
-
-        # Declare qubits
-        circuit_qasm_str = f"qubit[{self.n_qubits}] qr;\n\n"
-
-        # Append operations
-        for operation in self.circuit:
-            instruction = operation["instruction"].lower()
-            qubits = "], qr[".join([str(qubit) for qubit in operation["qubits"]])
-
-            circuit_qasm_str += f"{instruction} qr[{qubits}];\n"
-
-        return circuit_qasm_str
-
-class AtomArray:
-    def __init__(self, gui, n_rows=16, sites_per_row=16, row_spacing=4, site_spacing=4):
+class Simulation:
+    def __init__(self, experiment: Experiment, gui: GUI):
         # @TODO - load/store the other important variables that the user can give us
 
         # GUI handler
         self.gui = gui
 
         # Initial position parameters
-        self.n_rows = n_rows
-        self.sites_per_row = sites_per_row
-        self.n_qubits = n_rows * sites_per_row
-        self.row_spacing = row_spacing
-        self.site_spacing = site_spacing
+        self.n_rows = experiment["n_rows"]
+        self.sites_per_row = experiment["sites_per_row"]
+        self.n_qubits = experiment["n_rows"] * experiment["sites_per_row"]
+        self.row_spacing = experiment["row_spacing"]
+        self.site_spacing = experiment["site_spacing"]
 
-        self.performance_metrics = {}
+        self.performance_metrics = experiment.performance_metrics
 
         # Initialize all qubits randomly
         self.qubits = []
-        for i in range(0, n_rows):
-            for j in range(0, sites_per_row):
-                default_position = (np.random.uniform(0, j*site_spacing), np.random.uniform(0, i*row_spacing))
+        for i in range(0, self.n_rows):
+            for j in range(0, self.sites_per_row):
+                default_position = (np.random.uniform(0, j*self.site_spacing), np.random.uniform(0, i*self.row_spacing))
                 default_state = np.array([1+0j, 1+0j])/np.sqrt(2)
 
                 qubit = gui.prepare_qubit(default_position)
@@ -179,9 +140,7 @@ class AtomArray:
     def measure_all(self):
         return NotImplemented
 
-    def run_experiment(self, experiment):
-        self.performance_metrics = experiment.performance_metrics
-
+    def run_experiment(self, experiment: Experiment):
         for operation in experiment.circuit:
             match operation["instruction"]:
                 case "H":

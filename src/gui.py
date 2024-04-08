@@ -1,10 +1,8 @@
 from tkinter import *
 
-import tkinter
-
-from common.experiment import Experiment
-from common.simulation import Simulation
-from common.logging import *
+import device_presets
+from simulation import Simulation
+from logging import *
 
 qubit_radius = 30
 movement_step_time = 1000
@@ -17,7 +15,7 @@ class GUI:
 		self.temporaryStorage = {}
 
 	def construct_window(self):
-		self.window = tkinter.Tk()
+		self.window = Tk()
 		self.window.title("QuViz")
 		self.window.geometry(f'{self.window_width}x{self.window_height}')
 
@@ -53,9 +51,30 @@ class GUI:
 		return True
 
 	def compile_experiment(self):
-		# @TODO - parse and verify all user input
+		# @TODO - parse number of qubits
+		n_qubits = 0
+
+		# @TODO - parse circuit input
+		circuit = []
   
-		current_experiment = Experiment()
+		# @TODO - parse other experiment parameters
+		parameters = {}
+
+		##########################################################################################
+  		# TEST EXPERIMENT START
+		n_qubits = 19 * 2
+		circuit = [[{"gate": "CZ", "qubits": [0, 1]}]]
+		parameters = device_presets.AQUILA
+		# TEST EXPERIMENT STOP
+		##########################################################################################
+
+		# @TODO - turn into experiment
+		current_experiment = {
+			"n_qubits": n_qubits,
+			"circuit": circuit,
+			"parameters": parameters,
+		}
+
 		self.temporaryStorage["current_experiment"] = current_experiment
 
 		return True
@@ -72,13 +91,13 @@ class GUI:
 		return True
 
 	def construct_visualization_canvas(self):
-		self.canvas = tkinter.Canvas(self.window)
+		self.canvas = Canvas(self.window)
 		self.canvas.configure(bg="black")
 		self.canvas.pack(fill="both", expand=True)
 
 		return True
 
-	def prepare_qubit(self, initial_position):
+	def prepare_qubit_widget(self, initial_position):
 		qubit = self.canvas.create_oval(initial_position[0] - qubit_radius,
 			initial_position[1] - qubit_radius,
 			initial_position[0] + qubit_radius,
@@ -87,9 +106,6 @@ class GUI:
 
 		return qubit
 
-	def transport_qubit(self, qubit, movements):
+	def transport_qubit_widget(self, qubit, movements):
 		for m, movement in enumerate(movements):
 			self.window.after(movement_step_time * (m+1), lambda : self.canvas.move(qubit, movement[0], movement[1]))
-
-			# self.window.update()
-			# time.sleep(movement_step_time)

@@ -1,6 +1,5 @@
-from common.gui import GUI
-from common.experiment import Experiment
-from common.logging import *
+from gui import GUI
+from logging import *
 
 def main():
     log("INFO", "Running main process")

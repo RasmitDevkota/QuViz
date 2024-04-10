@@ -27,17 +27,17 @@ class Simulation:
         self.zone_margin_vertical = self.parameters["zone_margin_vertical"]
         self.zone_padding = np.array([self.parameters["zone_padding_horizontal"], self.parameters["zone_padding_vertical"]])
 
-        # Readout zone parameters
-        self.n_rows_readout = self.parameters["n_rows_readout"]
-        self.sites_per_row_readout = self.parameters["sites_per_row_readout"]
-        self.row_spacing_readout = self.parameters["row_spacing_readout"]
-        self.site_spacing_readout = self.parameters["site_spacing_readout"]
-        
-        self.readout_zone_width = 2 * self.zone_padding[0] + (self.sites_per_row_readout - 1) * self.site_spacing_readout
-        self.readout_zone_height = 2 * self.zone_padding[1] + (self.n_rows_readout - 1) * self.row_spacing_readout
-        
-        self.readout_zone_begin = np.array([0, 0])
-        self.readout_zone_end = self.readout_zone_begin + np.array([self.readout_zone_width, self.readout_zone_height])
+        # Storage zone parameters
+        self.n_rows_storage = self.parameters["n_rows_storage"]
+        self.sites_per_row_storage = self.parameters["sites_per_row_storage"]
+        self.row_spacing_storage = self.parameters["row_spacing_storage"]
+        self.site_spacing_storage = self.parameters["site_spacing_storage"]
+
+        self.storage_zone_width = 2 * self.zone_padding[0] + (self.sites_per_row_storage - 1) * self.site_spacing_storage
+        self.storage_zone_height = 2 * self.zone_padding[1] + (self.n_rows_storage - 1) * self.row_spacing_storage
+
+        self.storage_zone_begin = np.array([0, 0])
+        self.storage_zone_end = self.storage_zone_begin + np.array([self.storage_zone_width, self.storage_zone_height])
 
         # Entanglement zone parameters
         self.n_rows_entanglement = self.parameters["n_rows_entanglement"]
@@ -50,20 +50,20 @@ class Simulation:
         self.entanglement_zone_width = 2 * self.zone_padding[0] + (self.sites_per_row_entanglement - 1) * (self.site_spacing_entanglement + self.rydberg_blockade_radius)
         self.entanglement_zone_height = 2 * self.zone_padding[1] + (self.n_rows_entanglement - 1) * self.row_spacing_entanglement
 
-        self.entanglement_zone_begin = self.readout_zone_begin + np.array([0, self.readout_zone_height + self.zone_margin_vertical])
+        self.entanglement_zone_begin = self.storage_zone_begin + np.array([0, self.storage_zone_height + self.zone_margin_vertical])
         self.entanglement_zone_end = self.entanglement_zone_begin + np.array([self.entanglement_zone_width, self.entanglement_zone_height])
 
-        # Storage zone parameters
-        self.n_rows_storage = self.parameters["n_rows_storage"]
-        self.sites_per_row_storage = self.parameters["sites_per_row_storage"]
-        self.row_spacing_storage = self.parameters["row_spacing_storage"]
-        self.site_spacing_storage = self.parameters["site_spacing_storage"]
-
-        self.storage_zone_width = 2 * self.zone_padding[0] + (self.sites_per_row_storage - 1) * self.site_spacing_storage
-        self.storage_zone_height = 2 * self.zone_padding[1] + (self.n_rows_storage - 1) * self.row_spacing_storage
-
-        self.storage_zone_begin = self.entanglement_zone_begin + np.array([0, self.entanglement_zone_height + self.zone_margin_vertical])
-        self.storage_zone_end = self.storage_zone_begin + np.array([self.storage_zone_width, self.storage_zone_height])
+        # Readout zone parameters
+        self.n_rows_readout = self.parameters["n_rows_readout"]
+        self.sites_per_row_readout = self.parameters["sites_per_row_readout"]
+        self.row_spacing_readout = self.parameters["row_spacing_readout"]
+        self.site_spacing_readout = self.parameters["site_spacing_readout"]
+        
+        self.readout_zone_width = 2 * self.zone_padding[0] + (self.sites_per_row_readout - 1) * self.site_spacing_readout
+        self.readout_zone_height = 2 * self.zone_padding[1] + (self.n_rows_readout - 1) * self.row_spacing_readout
+        
+        self.readout_zone_begin = self.entanglement_zone_begin + np.array([0, self.entanglement_zone_height + self.zone_margin_vertical])
+        self.readout_zone_end = self.readout_zone_begin + np.array([self.readout_zone_width, self.readout_zone_height])
 
         # Transport parameters
         self.transport_axis_offset = self.parameters["transport_axis_offset"]
@@ -73,6 +73,10 @@ class Simulation:
         # Full atom array parameters
         self.array_width = max(self.storage_zone_width, self.entanglement_zone_width, self.readout_zone_width)
         self.array_height = self.storage_zone_height + self.entanglement_zone_height + self.readout_zone_height + self.zone_margin_vertical * 2
+        
+        self.gui.visualization_canvas.create_rectangle(*self.storage_zone_begin, *self.storage_zone_end, outline='purple')
+        self.gui.visualization_canvas.create_rectangle(*self.entanglement_zone_begin, *self.entanglement_zone_end, outline='salmon')
+        self.gui.visualization_canvas.create_rectangle(*self.readout_zone_begin, *self.readout_zone_end, outline='darkturquoise')
 
         # Errors
         self.T1_time = self.parameters["T1_time"]
@@ -95,8 +99,9 @@ class Simulation:
             if len(self.qubits) == 0:
                 for _ in range(self.n_qubits):
                     random_initial_position = np.array([
-                        np.random.normal(loc=self.array_width/2, scale=self.array_width/2**0.5),
-                        np.random.normal(loc=self.array_height/2, scale=self.array_height/2**0.5)
+                        0, 0
+                        # np.random.normal(loc=self.array_width/2, scale=self.array_width/2**0.5),
+                        # np.random.normal(loc=self.array_height/2, scale=self.array_height/2**0.5)
                     ])
 
                     self.qubits.append({
@@ -113,7 +118,9 @@ class Simulation:
                     position_row = i * self.row_spacing_storage
                     position_site = j * self.site_spacing_storage
 
-                    initial_positions.append((position_site, position_row))
+                    initial_position = np.array([position_site, position_row]) + self.storage_zone_begin + self.zone_padding
+
+                    initial_positions.append(initial_position)
 
                     sites_filled += 1
 
@@ -261,7 +268,7 @@ class Simulation:
                             self.apply_unitary(qubit, 0, 0, np.pi)
                     case "CZ":
                         # Offset all qubits before transport
-                        transport_offset = min(1E-6, int(self.site_spacing_storage/5))
+                        transport_offset = min(1E-6, int(np.ceil(self.site_spacing_storage/5)))
 
                         # Calculate transport duration such that all qubits arrive at the same time
                         next_empty_row = 0
@@ -271,7 +278,7 @@ class Simulation:
                         for i, q in enumerate(operation["qubits"]):
                             next_empty_position_center = np.array([next_empty_site * self.site_spacing_entanglement, next_empty_row * self.row_spacing_entanglement])
                             next_empty_position_relative = next_empty_position_center + self.rydberg_blockade_radius * np.array([q % 2 - 0.5, 0])
-                            next_empty_position = next_empty_position_relative + self.entanglement_zone_begin * 1000 + self.zone_padding
+                            next_empty_position = next_empty_position_relative + self.entanglement_zone_begin + self.zone_padding
 
                             displacement_vector = next_empty_position - self.qubits[q]["position"]
                             displacement_vectors.append(displacement_vector)
@@ -348,10 +355,9 @@ class Simulation:
                     case _:
                         continue
             
-            with self.lock:
-                for layerOp in layerOps:
-                    method = layerOp[0]
-                    arguments = layerOp[1:]
-                    method(*arguments)
+            for layerOp in layerOps:
+                method = layerOp[0]
+                arguments = layerOp[1:]
+                method(*arguments)
 
         return True

@@ -160,7 +160,7 @@ class GUI:
 
 			# print(viz_length_scale/movement_step_time)
 
-			movement_speed = np.linalg.norm(movement["movement_velocity"])# / viz_length_scale * 100
+			movement_speed = np.linalg.norm(movement["movement_velocity"]) #/ viz_length_scale
 			print(movement_speed)
 			time_needed = total_movement_distance/movement_speed
 			steps_needed = int(np.ceil(time_needed/movement_step_time))

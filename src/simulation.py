@@ -25,7 +25,7 @@ class Simulation:
 	def run_method_lambda(self, o, method_lambda):
 		method_lambda()
 
-		print(method_lambda)
+		print("running method lambda:", method_lambda)
 
 		self.layer_queue[0][o] = None
 
@@ -43,17 +43,15 @@ class Simulation:
 		return True
 	
 	def push_operation(self, _method_lambda, _delay):
-		print(len(self.layer_queue), self.layer_op_counter, _method_lambda)
 		self.layer_queue[-1].append(lambda layer_op_counter=self.layer_op_counter, method_lambda=_method_lambda, delay=_delay: self.schedule_operation(layer_op_counter, method_lambda, delay))
 		self.layer_op_counter += 1
 	
 	def execute_next_layer(self):
 		print("executing next layer...")
-		print(self.layer_queue[0])
 
 		layer_ops = self.layer_queue[0]
 		for layer_op in layer_ops:
-			print(layer_op)
+			print("executing layer operation:", layer_op)
 			layer_op()
 	
 	def load_experiment(self, experiment = None):
@@ -152,7 +150,6 @@ class Simulation:
 
 					self.qubits.append({
 						"position": random_initial_position,
-						"state": np.array([1+0j, 0+0j]),
 						"widget": self.prepare_qubit_widget(random_initial_position)
 					})
 			
@@ -180,12 +177,11 @@ class Simulation:
 		for i, tq in enumerate(target_qubits):
 			initial_position_raw = initial_positions[i]
 
-			initial_position_site = initial_position_raw[0] + np.random.normal(scale=self.parameters["delta_x"])
-			initial_position_row = initial_position_raw[1] + np.random.normal(scale=self.parameters["delta_y"])
+			initial_position = initial_position_raw + np.array([np.random.normal(scale=self.parameters["delta_x"]), np.random.normal(scale=self.parameters["delta_y"])])
 
-			delta_position = np.array([initial_position_site, initial_position_row]) - self.qubits[tq]["position"]
+			delta_position = initial_position - self.qubits[tq]["position"]
 			
-			self.qubits[tq]["position"] = np.array([initial_position_site, initial_position_row])
+			self.qubits[tq]["position"] = initial_position
 
 			self.transport_qubit_widget([{
 				"qubit": self.qubits[tq]["widget"],
@@ -195,6 +191,7 @@ class Simulation:
 		
 		return True
 	
+	# @TODO - Reformulate using Statevector
 	def prepare_qubit_states(self, target_qubits=[], initial_states=[]):
 		if len(target_qubits) == 0:
 			# Prepare all qubits
@@ -214,6 +211,7 @@ class Simulation:
 		
 		return True
 	
+	# @TODO - Reformulate using Statevector
 	def apply_unitary(self, qubit, theta, alpha, beta):
 		unitary_matrix = np.array([
 			[np.cos(theta/2), -np.exp(1j * beta) * np.sin(theta/2)],
@@ -224,6 +222,7 @@ class Simulation:
 
 		return True
 	
+	# @TODO - Reformulate using Statevector
 	def measure_qubits(self, qubits=[]):
 		# Loop through each qubit
 		for qubit in qubits:
@@ -283,6 +282,9 @@ class Simulation:
 		return True
 	
 	def compile_experiment(self, experiment = None):
+		next_empty_row = 0
+		next_empty_site = 0
+
 		if experiment:
 			self.load_experiment(experiment)
 		
@@ -331,8 +333,6 @@ class Simulation:
 						transport_offset = min(1E-6, int(np.ceil(self.site_spacing_storage/5)))
 
 						# Calculate transport duration such that all qubits arrive at the same time
-						next_empty_row = 0
-						next_empty_site = 0
 
 						displacement_vectors = []
 						for i, q in enumerate(operation["qubits"]):
@@ -354,9 +354,6 @@ class Simulation:
 						
 						transport_duration = max_L1_distance/self.max_transport_speed
 
-						next_empty_row = 0
-						next_empty_site = 0
-
 						# Offset
 						for i, q in enumerate(operation["qubits"]):
 							self.transport_qubit_widget([{
@@ -365,16 +362,16 @@ class Simulation:
 								"movement_velocity": self.max_transport_speed * np.array([1, 1])
 							}])
 
+						# Move horizontally
 						for i, q in enumerate(operation["qubits"]):
-							# Move horizontally
 							self.transport_qubit_widget([{
 								"qubit": self.qubits[q]["widget"],
 								"movement": np.array([displacement_vectors[i][0], 0]),
 								"movement_velocity": L1_distances[i]/transport_duration
 							}])
 						
+						# Move vertically
 						for i, q in enumerate(operation["qubits"]):
-							# Move vertically
 							self.transport_qubit_widget([{
 								"qubit": self.qubits[q]["widget"],
 								"movement": np.array([0, displacement_vectors[i][1]]),
@@ -388,6 +385,38 @@ class Simulation:
 								"movement": -1 * np.array([transport_offset, transport_offset]),
 								"movement_velocity": self.max_transport_speed * np.array([1, 1])
 							}])
+						
+						# # Offset
+						# for i, q in enumerate(operation["qubits"]):
+						# 	self.transport_qubit_widget([{
+						# 		"qubit": self.qubits[q]["widget"],
+						# 		"movement": np.array([transport_offset, transport_offset]),
+						# 		"movement_velocity": self.max_transport_speed * np.array([1, 1])
+						# 	}])
+						
+						# # Move back horizontally
+						# for i, q in enumerate(operation["qubits"]):
+						# 	self.transport_qubit_widget([{
+						# 		"qubit": self.qubits[q]["widget"],
+						# 		"movement": -1 * np.array([displacement_vectors[i][0], 0]),
+						# 		"movement_velocity": L1_distances[i]/transport_duration
+						# 	}])
+						
+						# # Move back vertically
+						# for i, q in enumerate(operation["qubits"]):
+						# 	self.transport_qubit_widget([{
+						# 		"qubit": self.qubits[q]["widget"],
+						# 		"movement": -1 * np.array([0, displacement_vectors[i][1]]),
+						# 		"movement_velocity": L1_distances[i]/transport_duration
+						# 	}])
+
+						# # Undo offset
+						# for i, q in enumerate(operation["qubits"]):
+						# 	self.transport_qubit_widget([{
+						# 		"qubit": self.qubits[q]["widget"],
+						# 		"movement": -1 * np.array([transport_offset, transport_offset]),
+						# 		"movement_velocity": self.max_transport_speed * np.array([1, 1])
+						# 	}])
 					case _:
 						continue
 

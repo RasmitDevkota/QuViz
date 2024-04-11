@@ -74,7 +74,12 @@ class GUI:
 		##########################################################################################
   		# TEST EXPERIMENT START
 		n_qubits = 10
-		circuit = [[{"instruction": "CZ", "qubits": [0, 1]}]]
+		circuit = [
+			[{"instruction": "CZ", "qubits": [0, 1]}],
+			# [{"instruction": "CZ", "qubits": [0, 1]}, {"instruction": "CZ", "qubits": [2, 3]}],
+			[{"instruction": "CZ", "qubits": [2, 3]}],
+			# [{"instruction": "CZ", "qubits": [1, 2]}],
+		]
 		parameters = hardware_presets.DEFAULT
 		# TEST EXPERIMENT STOP
 		##########################################################################################

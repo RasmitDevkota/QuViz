@@ -8,24 +8,22 @@ import hardware_presets
 from simulation import Simulation
 from logging import *
 
-viz_length_scale = 1E-6/10
-viz_time_scale = 10E-6 * 1000
-
-viz_offset_horizontal = 100
-viz_offset_vertical = 75
-viz_offset_vector = np.array([viz_offset_horizontal, viz_offset_vertical])
-
-qubit_radius = 1E-6/viz_length_scale
-movement_step_time = 1
-
 class GUI:
 	def __init__(self, window_width=800, window_height=600):
 		self.window_width = window_width
 		self.window_height = window_height
+		
+		self.viz_length_scale = 1E-6/5
+		self.viz_time_scale = 10E-6 * 1000
+
+		self.viz_offset_horizontal = 75
+		self.viz_offset_vertical = 75
+		self.viz_offset_vector = np.array([self.viz_offset_horizontal, self.viz_offset_vertical])
+
+		self.qubit_radius = 1E-6/self.viz_length_scale
+		self.movement_step_time = 1
 
 		self.temporaryStorage = {}
-
-		self.lock = Lock()
 
 	def construct_window(self):
 		self.window = Tk()
@@ -97,100 +95,17 @@ class GUI:
 
 		self.construct_visualization_canvas()
 
-		# self.lock.acquire()
-
 		current_experiment = self.temporaryStorage["current_experiment"]
 		simulation = Simulation(current_experiment, self)
-
-		# self.lock.release()
-
+		simulation.compile_experiment()
 		simulation.run_experiment()
 
 		return True
 
 	def construct_visualization_canvas(self):
-		# print("received a construction call, waiting for lock")
-		# with self.lock:
-		# self.lock.acquire()
-		# print("acquired lock")
-
 		self.visualization_canvas = Canvas(self.window)
 		self.visualization_canvas.configure(bg="black")
 		self.visualization_canvas.pack(fill="both", expand=True)
 
-		# print("finished construction call")
-		# self.lock.release()
-		# print("released lock")
-
 		return True
 
-	def prepare_qubit_widget(self, initial_position):
-		# print("received a preparation call, waiting for lock")
-		# self.lock.acquire()
-		# print("acquired lock")
-
-		initial_position = initial_position/viz_length_scale + viz_offset_vector
-
-		qubit = self.visualization_canvas.create_oval(initial_position[0] - qubit_radius,
-			initial_position[1] - qubit_radius,
-			initial_position[0] + qubit_radius,
-			initial_position[1] + qubit_radius,
-			fill="springgreen", outline="greenyellow", width=4)
-		
-		print(f"new qubit @ {initial_position} @ {datetime.datetime.now()}")
-		
-		# print("finished preparation call")
-		# self.lock.release()
-		# print("released lock")
-
-		return qubit
-
-	def transport_qubit_widget(self, movements):
-		# print("received a transport call, waiting for lock")
-		# self.lock.acquire()
-		# print("acquired lock")
-
-		for m, movement in enumerate(movements):
-			total_movement_vector = movement["movement"]/viz_length_scale
-			total_movement_distance = np.linalg.norm(total_movement_vector)
-
-			if total_movement_distance == 0:
-				print("ignoring movement with distance 0")
-				continue
-
-			# print(viz_length_scale/movement_step_time)
-
-			movement_speed = np.linalg.norm(movement["movement_velocity"]) #/ viz_length_scale
-			print(movement_speed)
-			time_needed = total_movement_distance/movement_speed
-			steps_needed = int(np.ceil(time_needed/movement_step_time))
-			movement_step_size = total_movement_distance/steps_needed
-			
-			unit_movement_vector = total_movement_vector/np.linalg.norm(total_movement_vector)
-			step_movement_vector = movement_step_size * unit_movement_vector
-
-			print(total_movement_vector, total_movement_distance, time_needed)
-
-			for step in range(steps_needed):
-				self.window.after(movement_step_time * (step + 1), lambda : self.visualization_canvas.move(movement["qubit"], *step_movement_vector))
-				# self.visualization_canvas.move(movement["qubit"], *step_movement_vector)
-
-		# print("finished transport call")
-		# self.lock.release()
-		# print("released lock")
-		
-		return True
-	
-	def expel_qubit_widget(self, qubit):
-		self.visualization_canvas.delete(qubit)
-
-		return True
-	
-	def enqueue(self, method, arguments):
-		self.lock.acquire()
-
-		method(arguments)
-
-		self.lock.relase()
-
-		return True

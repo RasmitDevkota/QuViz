@@ -21,9 +21,9 @@ DEFAULT = {
     "site_spacing_storage": 5.5E-6,
     # Transport parameters
     "transport_axis_offset": 1E-6,
-    "max_transport_speed": 0.725E-6/1E-6,
+    "max_transport_speed": 100 * 0.725E-6/1E-6,
     "min_transport_speed": 0.25E-6/1E-6,
-    # Errors
+    # Physical parameters
     "delta_x": 0.05E-6,
     "delta_y": 0.05E-6,
     "epsilon_fill": 0.007,

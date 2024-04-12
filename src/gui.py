@@ -75,10 +75,16 @@ class GUI:
   		# TEST EXPERIMENT START
 		n_qubits = 10
 		circuit = [
-			[{"instruction": "CZ", "qubits": [0, 1]}],
+			# [{"instruction": "CZ", "qubits": [0, 1]}],
 			# [{"instruction": "CZ", "qubits": [0, 1]}, {"instruction": "CZ", "qubits": [2, 3]}],
-			[{"instruction": "CZ", "qubits": [2, 3]}],
+			# [{"instruction": "CZ", "qubits": [2, 3]}],
 			# [{"instruction": "CZ", "qubits": [1, 2]}],
+			# [{"instruction": "CZ", "qubits": [i, i+1]}] for i in range(9)
+			[{"instruction": "CZ", "qubits": [0, 1]}],
+			[{"instruction": "CCZ", "qubits": [0, 1, 2]}],
+			[{"instruction": "CCCZ", "qubits": [1, 4, 3, 0]}],
+			# [{"instruction": "CCCCZ", "qubits": [3, 4, 5, 6, 7]}],
+			# [{"instruction": "CCCCCZ", "qubits": [0, 2, 4, 6, 8, 9]}],
 		]
 		parameters = hardware_presets.DEFAULT
 		# TEST EXPERIMENT STOP
@@ -96,6 +102,8 @@ class GUI:
 		return True
 
 	def load_visualizer(self):
+		self.compile_experiment()
+
 		self.clear_frame()
 
 		self.construct_visualization_canvas()

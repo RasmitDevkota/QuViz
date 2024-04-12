@@ -6,7 +6,6 @@ from tkinter import *
 
 import hardware_presets
 from simulation import Simulation
-from logging import *
 
 from qiskit import QuantumCircuit, qasm3
 from qiskit.circuit import CircuitInstruction
@@ -79,7 +78,7 @@ class GUI:
 			qasm_str = self.qasm_text.get(1.0, "end-1c")
 
 		try:
-			qiskit_circuit = qasm3.loads(qasm_str)
+			original_circuit = qasm3.loads(qasm_str)
 		except qasm3.QASM3ImporterError:
 			print("Failed to compile OpenQASM3 input! Please check your syntax.")
 
@@ -89,10 +88,11 @@ class GUI:
 		
 		# @TODO - Decompose QuantumCircuit into program-native circuit
 		native_circuit_data = []
-		for l in range(len(circuit.depth())):
+		for l in range(len(original_circuit.depth())):
 			# Get the circuit instruction(s?) at this position
-			circuit_instruction = circuit.data[l]
-
+			circuit_instruction = original_circuit.data[l]
+			print(circuit_instruction)
+			
 			if circuit_instruction.operation in basis_gate_operations:
 				native_circuit_data.append(circuit_instruction)
 			else:

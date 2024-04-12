@@ -1,8 +1,7 @@
 from gui import GUI
-from logging import *
 
 def main():
-    log("INFO", "Running main process")
+    print("Running main process")
 
     gui = GUI()
 

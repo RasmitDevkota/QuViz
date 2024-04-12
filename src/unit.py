@@ -1,32 +1,32 @@
-import tkinter as tk
+# import tkinter as tk
 
-root = tk.Tk()
-canvas = tk.Canvas(root, width=400, height=400, bg="gray")
-canvas.pack()
+# root = tk.Tk()
+# canvas = tk.Canvas(root, width=400, height=400, bg="gray")
+# canvas.pack()
 
-cur_rec = 0
+# cur_rec = 0
 
-class Rect:
-    def __init__(self, x1, y1, name):
-        # Create a unique tag for each object
-        tag = f"movable{id(self)}"
-        rec = canvas.create_rectangle(x1, y1, x1 + 40, y1 + 40, fill='#c0c0c0', tag=(tag,))
-        text = canvas.create_text(x1 + 20, y1 + 20, text=name, tag=(tag,))
-        print(id(self), name, rec, text)
+# class Rect:
+#     def __init__(self, x1, y1, name):
+#         # Create a unique tag for each object
+#         tag = f"movable{id(self)}"
+#         rec = canvas.create_rectangle(x1, y1, x1 + 40, y1 + 40, fill='#c0c0c0', tag=(tag,))
+#         text = canvas.create_text(x1 + 20, y1 + 20, text=name, tag=(tag,))
+#         print(id(self), name, rec, text)
 
-# Test rectangles
-bob = Rect(20, 20, 'Bob')
-rob = Rect(80, 80, 'Rob')
-different_bob = Rect(160, 160, 'Bob')
+# # Test rectangles
+# bob = Rect(20, 20, 'Bob')
+# rob = Rect(80, 80, 'Rob')
+# different_bob = Rect(160, 160, 'Bob')
 
-print(id(bob), id(different_bob))
+# print(id(bob), id(different_bob))
 
-for i in range(1, 50):
-    print(canvas.gettags(f"movable{id(bob)}"))
-    for obj in canvas.gettags(f"movable{id(bob)}"):
-        root.after(i * 50, canvas.move, *[obj, 1, 0])
+# for i in range(1, 50):
+#     print(canvas.gettags(f"movable{id(bob)}"))
+#     for obj in canvas.gettags(f"movable{id(bob)}"):
+#         root.after(i * 50, canvas.move, *[obj, 1, 0])
 
-root.mainloop()
+# root.mainloop()
 
 
 # from tkinter import Tk, mainloop, TOP

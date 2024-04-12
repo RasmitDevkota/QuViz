@@ -104,6 +104,9 @@ class Simulation:
 
 		self.rydberg_blockade_radius = self.parameters["rydberg_blockade_radius"]
 
+		# Ensure that entanglement sites are at least 2.5 times the Rydberg blockade radius apart
+		self.site_spacing_entanglement = max(self.site_spacing_entanglement, 2.5 * self.rydberg_blockade_radius)
+
 		self.entanglement_zone_width = 2 * self.zone_padding[0] + (self.sites_per_row_entanglement - 1) * (self.site_spacing_entanglement + self.rydberg_blockade_radius)
 		self.entanglement_zone_height = 2 * self.zone_padding[1] + (self.n_rows_entanglement - 1) * self.row_spacing_entanglement
 
@@ -167,7 +170,7 @@ class Simulation:
 	def prepare_qubit_positions(self, target_qubits=[], initial_positions=[]):
 		if len(target_qubits) == 0 or len(initial_positions) == 0:
 			if len(self.qubits) == 0:
-				for _ in range(self.n_qubits):
+				for q in range(self.n_qubits):
 					random_initial_position = np.array([
 						0, 0
 						# np.random.normal(loc=self.array_width/2, scale=self.array_width/2**0.5),
@@ -176,7 +179,7 @@ class Simulation:
 
 					self.qubits.append({
 						"position": random_initial_position,
-						"widget": self.prepare_qubit_widget(random_initial_position)
+						"widget": self.prepare_qubit_widget(q, random_initial_position)
 					})
 
 			target_qubits = [q for q in range(len(self.qubits))]
@@ -267,14 +270,16 @@ class Simulation:
 
 		return True
 
-	def prepare_qubit_widget(self, initial_position):
+	def prepare_qubit_widget(self, q, initial_position):
 		initial_position = initial_position/self.gui.viz_length_scale + self.gui.viz_offset_vector
 
 		qubit = self.gui.visualization_canvas.create_oval(initial_position[0] - self.gui.qubit_radius,
 			initial_position[1] - self.gui.qubit_radius,
 			initial_position[0] + self.gui.qubit_radius,
 			initial_position[1] + self.gui.qubit_radius,
-			fill="springgreen", outline="greenyellow", width=4)
+			fill="springgreen", outline="greenyellow", width=4, tag=(f"qubit{q}",))
+
+		self.gui.visualization_canvas.create_text(initial_position[0], initial_position[1], text=q, fill="black", font=("Arial", 10), tag=(f"qubit{q}",))
 
 		return qubit
 
@@ -288,7 +293,8 @@ class Simulation:
 			if total_movement_distance == 0:
 				continue
 
-			movement_speed = np.linalg.norm(movement["movement_velocity"])
+			# movement_speed = np.linalg.norm(movement["movement_velocity"])
+			movement_speed = np.linalg.norm(self.max_transport_speed)
 			time_needed = total_movement_distance/movement_speed
 			steps_needed = int(np.ceil(time_needed/self.gui.movement_step_time))
 			movement_step_size = total_movement_distance/steps_needed
@@ -297,22 +303,25 @@ class Simulation:
 			step_movement_vector = movement_step_size * unit_movement_vector
 
 			for step in range(steps_needed):
-				method_lambda = lambda: self.gui.visualization_canvas.move(movement["qubit"], *step_movement_vector)
+				for qubit_widget_component in self.gui.visualization_canvas.gettags(movement["qubit"]):
+					method_lambda = lambda : self.gui.visualization_canvas.move(qubit_widget_component, *step_movement_vector)
 
-				self.push_operation(method_lambda, self.gui.movement_step_time * (offset + step + 1))
+					self.push_operation(method_lambda, self.gui.movement_step_time * (offset + step + 1))
 			
 			offset += (steps_needed + 1)
 
 		return True
 
 	def expel_qubit_widget(self, qubit):
-		method_lambda = lambda: self.visualization_canvas.delete(qubit)
-		self.push_operation(method_lambda, 0)
+		for qubit_widget_component in self.gui.visualization_canvas.gettags(qubit):
+			method_lambda = lambda: self.visualization_canvas.delete(qubit_widget_component)
+		
+			self.push_operation(method_lambda, 0)
 
 		return True
 
-	def compile_experiment(self, experiment = None):
-		self.entanglement_sites = [None for _ in range(self.n_rows_entanglement * self.sites_per_row_entanglement)]
+	def compile_experiment(self, experiment=None):
+		self.entanglement_sites = [[] for _ in range(self.n_rows_entanglement * self.sites_per_row_entanglement)]
 
 		if experiment:
 			self.load_experiment(experiment)
@@ -326,37 +335,23 @@ class Simulation:
 
 			# @TODO - Move qubit back to storage zone before performing single-qubit gates
 			for operation in layer:
-				if operation["instruction"] == "H":
-					for qubit in operation["qubits"]:
-						self.apply_unitary(qubit, np.pi/2, 0, np.pi)
-				elif operation["instruction"] == "S":
-					for qubit in operation["qubits"]:
-						self.apply_unitary(qubit, 0, 0, np.pi/2)
-				elif operation["instruction"] == "Sdg":
-					for qubit in operation["qubits"]:
-						self.apply_unitary(qubit, 0, 0, -np.pi/2)
-				elif operation["instruction"] == "T":
-					for qubit in operation["qubits"]:
-						self.apply_unitary(qubit, 0, 0, np.pi/4)
-				elif operation["instruction"] == "RX":
-					for qubit in operation["qubits"]:
-						self.apply_unitary(qubit, operation["parameters"]["theta"], -np.pi/2, np.pi/2)
-				elif operation["instruction"] == "RY":
-					for qubit in operation["qubits"]:
-						self.apply_unitary(qubit, operation["parameters"]["theta"], 0, 0)
-				elif operation["instruction"] == "RX":
-					for qubit in operation["qubits"]:
-						self.apply_unitary(qubit, 0, 0, operation["parameters"]["theta"])
-				elif operation["instruction"] == "X":
-					for qubit in operation["qubits"]:
-						self.apply_unitary(qubit, np.pi, 0, np.pi)
-				elif operation["instruction"] == "Y":
-					for qubit in operation["qubits"]:
-						self.apply_unitary(qubit, np.pi, np.pi/2, np.pi)
-				elif operation["instruction"] == "Z":
-					for qubit in operation["qubits"]:
-						self.apply_unitary(qubit, 0, 0, np.pi)
-				elif re.match("^C+Z$", operation["instruction"]):
+				if operation["instruction"] in ["H", "S", "Sdg", "T", "RX", "RY", "RZ", "X", "Y", "Z"]:
+					# Move qubit back to storage zone before performing single-qubit gate
+					for rq in operation["qubits"]:
+						storage_site = rq % self.sites_per_row_storage
+						storage_row = int(rq/self.sites_per_row_storage)
+						storage_position_relative = np.array([storage_site * self.site_spacing_storage, storage_row * self.row_spacing_storage])
+						new_qubit_position = self.storage_zone_begin + self.zone_padding + storage_position_relative
+						displacement_vector = new_qubit_position - self.qubits[rq]["position"]
+
+						self.qubits[rq]["position"] = new_qubit_position
+
+						self.transport_qubit_widget([{
+							"qubit": self.qubits[rq]["widget"],
+							"movement": displacement_vector,
+							"movement_velocity": self.max_transport_speed * np.array([1, 1])
+						}])
+				elif re.match("^(C+Z|CP|PSCP)$", operation["instruction"]):
 					transport_needed = True
 					site_needed = True
 
@@ -368,7 +363,7 @@ class Simulation:
 					entanglement_site = None
 
 					for s, site in enumerate(self.entanglement_sites):
-						if site == None:
+						if len(site) == 0:
 							continue
 
 						qubits_in_site = [q in site for q in transport_qubits]
@@ -397,7 +392,7 @@ class Simulation:
 								for oq in other_qubits:
 									if self.determine_position_zone(self.qubits[oq]["position"]) == "entanglement":
 										for so, site_other in enumerate(self.entanglement_sites[s+1:]):
-											if site_other != None and oq in site_other:
+											if oq in site_other:
 												self.entanglement_sites[s+1+so].remove(oq)
 
 							break
@@ -405,7 +400,7 @@ class Simulation:
 					if not transport_needed:
 						continue
 					elif site_needed:
-						entanglement_site = self.entanglement_sites.index(None) % self.sites_per_row_entanglement
+						entanglement_site = self.entanglement_sites.index([]) % self.sites_per_row_entanglement
 
 					self.entanglement_sites[entanglement_site] = transport_qubits
 
@@ -420,14 +415,14 @@ class Simulation:
 						self.qubits[rq]["position"] = new_qubit_position
 
 						self.transport_qubit_widget([{
-							"qubit": self.qubits[q]["widget"],
+							"qubit": self.qubits[rq]["widget"],
 							"movement": displacement_vector,
 							"movement_velocity": self.max_transport_speed * np.array([1, 1])
 						}])
 
 						# # Offset
 						# self.transport_qubit_widget([{
-						# 	"qubit": self.qubits[q]["widget"],
+						# 	"qubit": self.qubits[rq]["widget"],
 						# 	"movement": np.array([self.transport_offset, self.transport_offset]),
 						# 	"movement_velocity": self.max_transport_speed * np.array([1, 1])
 						# }])
@@ -461,7 +456,7 @@ class Simulation:
 					displacement_vectors = []
 					angular_separation = 2 * np.pi/len(transport_qubits)
 					for i, q in enumerate(transport_qubits):
-						blockade_position = self.rydberg_blockade_radius * np.array([np.cos(i * angular_separation), np.sin(i * angular_separation)])
+						blockade_position = self.rydberg_blockade_radius * np.array([-np.cos(i * angular_separation), np.sin(i * angular_separation)])
 						entanglement_position_relative = entanglement_position_center + blockade_position
 						new_qubit_position = self.entanglement_zone_begin + self.zone_padding + entanglement_position_relative
 
@@ -545,7 +540,7 @@ class Simulation:
 
 		return True
 
-	def run_experiment(self, experiment = None):
+	def run_experiment(self, experiment=None):
 		if experiment:
 			self.load_experiment(experiment)
 			self.compile_experiment(experiment)

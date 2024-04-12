@@ -8,6 +8,9 @@ import hardware_presets
 from simulation import Simulation
 from logging import *
 
+from qiskit import QuantumCircuit, qasm3
+from qiskit.circuit import CircuitInstruction
+
 class GUI:
 	def __init__(self, window_width=800, window_height=600):
 		self.window_width = window_width
@@ -22,6 +25,8 @@ class GUI:
 
 		self.qubit_radius = 1E-6/self.viz_length_scale
 		self.movement_step_time = 1
+
+		self.qasm_text = None
 
 		self.temporaryStorage = {}
 
@@ -50,14 +55,17 @@ class GUI:
 	def load_circuit_composer(self):
 		self.clear_frame()
 
-		header_label = Label(self.window, text="Circuit Composer", width=50, height=30)
+		header_label = Label(self.window, text="Circuit Composer", width=50, height=10, font=("Arial", 18))
 		header_label.pack()
+		
+		self.qasm_text = Text(self.window, height=20, width=150, font=("Arial", 16))
+		self.qasm_text.pack(side=TOP, padx=10, pady=5)
 
 		compile_experiment_button = Button(self.window, command=self.compile_experiment, text="Compile Experiment", font=("Arial", 16), width=18, height=1)
-		compile_experiment_button.pack(side=LEFT, padx=10, pady=5)
+		compile_experiment_button.pack(side=LEFT, padx=30, pady=5)
 
 		visualize_experiment_button = Button(self.window, command=self.load_visualizer, text="Visualize Experiment", font=("Arial", 16), width=18, height=1)
-		visualize_experiment_button.pack(side=RIGHT, padx=10, pady=5)
+		visualize_experiment_button.pack(side=RIGHT, padx=30, pady=5)
 
 		return True
 
@@ -65,7 +73,36 @@ class GUI:
 		# @TODO - parse number of qubits
 		n_qubits = 0
 
-		# @TODO - parse circuit input
+		# Parse circuit input into Qiskit QuantumCircuit
+		qasm_str = ""
+		if self.qasm_text:
+			qasm_str = self.qasm_text.get(1.0, "end-1c")
+
+		try:
+			qiskit_circuit = qasm3.loads(qasm_str)
+		except qasm3.QASM3ImporterError:
+			print("Failed to compile OpenQASM3 input! Please check your syntax.")
+
+			return
+		
+		basis_gate_operations = []
+		
+		# @TODO - Decompose QuantumCircuit into program-native circuit
+		native_circuit_data = []
+		for l in range(len(circuit.depth())):
+			# Get the circuit instruction(s?) at this position
+			circuit_instruction = circuit.data[l]
+
+			if circuit_instruction.operation in basis_gate_operations:
+				native_circuit_data.append(circuit_instruction)
+			else:
+				# @TODO - Decompose non-basis gate into basis gates
+				pass
+		
+		# Create a new QuantumCircuit with the basis gate-decomposed circuit
+		native_circuit = QuantumCircuit(n_qubits)
+		native_circuit.data = native_circuit_data
+
 		circuit = []
   
 		# @TODO - parse other experiment parameters
@@ -73,18 +110,22 @@ class GUI:
 
 		##########################################################################################
   		# TEST EXPERIMENT START
-		n_qubits = 10
+		n_qubits = 11
 		circuit = [
-			# [{"instruction": "CZ", "qubits": [0, 1]}],
-			# [{"instruction": "CZ", "qubits": [0, 1]}, {"instruction": "CZ", "qubits": [2, 3]}],
-			# [{"instruction": "CZ", "qubits": [2, 3]}],
-			# [{"instruction": "CZ", "qubits": [1, 2]}],
-			# [{"instruction": "CZ", "qubits": [i, i+1]}] for i in range(9)
 			[{"instruction": "CZ", "qubits": [0, 1]}],
-			[{"instruction": "CCZ", "qubits": [0, 1, 2]}],
-			[{"instruction": "CCCZ", "qubits": [1, 4, 3, 0]}],
+			# [{"instruction": "CZ", "qubits": [0, 1]}, {"instruction": "CZ", "qubits": [2, 3]}],
+			[{"instruction": "CZ", "qubits": [2, 3]}],
+			[{"instruction": "CZ", "qubits": [1, 2]}],
+			# [{"instruction": "CZ", "qubits": [i, i+1]}] for i in range(9)
+			# [{"instruction": "H", "qubits": [0]}],
+			# [{"instruction": "CZ", "qubits": [0, 1]}],
+			# [{"instruction": "H", "qubits": [0]}],
+			# [{"instruction": "CCZ", "qubits": [2, 3, 4]}],
+			# [{"instruction": "H", "qubits": [2, 4]}],
+			# [{"instruction": "CCCZ", "qubits": [5, 6, 7, 8]}],
 			# [{"instruction": "CCCCZ", "qubits": [3, 4, 5, 6, 7]}],
 			# [{"instruction": "CCCCCZ", "qubits": [0, 2, 4, 6, 8, 9]}],
+   			# [{"instruction": "CP", "qubits": [9, 10]}],
 		]
 		parameters = hardware_presets.DEFAULT
 		# TEST EXPERIMENT STOP

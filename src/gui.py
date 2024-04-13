@@ -11,7 +11,7 @@ from qiskit import QuantumCircuit, qasm3
 from qiskit.circuit import CircuitInstruction
 
 class GUI:
-	def __init__(self, window_width=800, window_height=600):
+	def __init__(self, window_width=800, window_height=800):
 		self.window_width = window_width
 		self.window_height = window_height
 		
@@ -72,36 +72,36 @@ class GUI:
 		# @TODO - parse number of qubits
 		n_qubits = 0
 
-		# Parse circuit input into Qiskit QuantumCircuit
-		qasm_str = ""
-		if self.qasm_text:
-			qasm_str = self.qasm_text.get(1.0, "end-1c")
+		# # Parse circuit input into Qiskit QuantumCircuit
+		# qasm_str = ""
+		# if self.qasm_text:
+		# 	qasm_str = self.qasm_text.get(1.0, "end-1c")
 
-		try:
-			original_circuit = qasm3.loads(qasm_str)
-		except qasm3.QASM3ImporterError:
-			print("Failed to compile OpenQASM3 input! Please check your syntax.")
+		# try:
+		# 	original_circuit = qasm3.loads(qasm_str)
+		# except qasm3.QASM3ImporterError:
+		# 	print("Failed to compile OpenQASM3 input! Please check your syntax.")
 
-			return
+		# 	return
 		
-		basis_gate_operations = []
+		# basis_gate_operations = []
 		
-		# @TODO - Decompose QuantumCircuit into program-native circuit
-		native_circuit_data = []
-		for l in range(len(original_circuit.depth())):
-			# Get the circuit instruction(s?) at this position
-			circuit_instruction = original_circuit.data[l]
-			print(circuit_instruction)
+		# # @TODO - Decompose QuantumCircuit into program-native circuit
+		# native_circuit_data = []
+		# for l in range(len(original_circuit.depth())):
+		# 	# Get the circuit instruction(s?) at this position
+		# 	circuit_instruction = original_circuit.data[l]
+		# 	print(circuit_instruction)
 			
-			if circuit_instruction.operation in basis_gate_operations:
-				native_circuit_data.append(circuit_instruction)
-			else:
-				# @TODO - Decompose non-basis gate into basis gates
-				pass
+		# 	if circuit_instruction.operation in basis_gate_operations:
+		# 		native_circuit_data.append(circuit_instruction)
+		# 	else:
+		# 		# @TODO - Decompose non-basis gate into basis gates
+		# 		pass
 		
-		# Create a new QuantumCircuit with the basis gate-decomposed circuit
-		native_circuit = QuantumCircuit(n_qubits)
-		native_circuit.data = native_circuit_data
+		# # Create a new QuantumCircuit with the basis gate-decomposed circuit
+		# native_circuit = QuantumCircuit(n_qubits)
+		# native_circuit.data = native_circuit_data
 
 		circuit = []
   
@@ -154,7 +154,30 @@ class GUI:
 		simulation.compile_experiment()
 		simulation.run_experiment()
 
+
+
 		return True
+	
+	def load_output(self):
+		self.clear_frame()
+    	
+
+	
+		text_label = Label(self.window, text="", wraplength=400, width=100, height=40)
+		text_label.pack(pady=10)
+		text_label.config(text="Filler text!!! \nLorem ipsum dolor sit amet, consectetur adipiscing elit. Sed non risus. Suspendisse lectus tortor, dignissim sit amet, adipiscing nec, ultricies sed, dolor.")
+
+		main_menu_button = Button(self.window, text="Main Menu", command=self.load_main_menu, font=("Arial", 18), width=18, height=1)
+		main_menu_button.pack(side=TOP, padx=10, pady=5)
+
+		return True
+	
+	def show_continue_button(self):
+		output_button = Button(self.window, command=self.load_output, text="See output state vector!", font=("Arial", 18), width=18, height=1)
+		output_button.pack(side=TOP, padx=10, pady=5)
+		
+		return True
+
 
 	def construct_visualization_canvas(self):
 		self.visualization_canvas = Canvas(self.window)

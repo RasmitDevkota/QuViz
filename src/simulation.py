@@ -36,6 +36,7 @@ class Simulation:
 					self.execute_next_layer()
 				else:
 					print("finished executing all layers!")
+					self.gui.show_continue_button()
 
 			self.layer_deletion_lock.release()
 

@@ -46,7 +46,7 @@ class GUI:
 		header_label = Label(self.window, text="QuViz", font=("Arial", 36), width=20, height=10)
 		header_label.pack()
 
-		circuit_composer_button = Button(self.window, command=self.load_circuit_composer, text="Circuit Composer", font=("Arial", 18), width=18, height=1)
+		circuit_composer_button = Button(self.window, command=self.load_circuit_composer, text="Experiment Designer", font=("Arial", 18), width=18, height=1)
 		circuit_composer_button.pack(side=TOP, padx=10, pady=5)
 
 		return True

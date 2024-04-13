@@ -71,13 +71,32 @@ class QuantumComposer:
         gate_x = self.x_start + segment_index * self.gate_size
         gate_y = self.y_start + wire_index * self.wire_spacing
 
-        gate = self.canvas.create_rectangle(
-            gate_x - self.gate_size // 2,
-            gate_y - self.gate_size // 2,
-            gate_x + self.gate_size // 2,
-            gate_y + self.gate_size // 2,
-            fill="lightblue", tag=(f"{wire_index}{segment_index}",)
-        )
+        single_gates = ["H", "X", "Y", "Z"]
+        gate = None
+        if (self.selected_gate in single_gates):
+            gate = self.canvas.create_rectangle(
+                gate_x - self.gate_size // 2,
+                gate_y - self.gate_size // 2,
+                gate_x + self.gate_size // 2,
+                gate_y + self.gate_size // 2,
+                fill="lightblue", tag=(f"{wire_index}{segment_index}",)
+            )
+        else:
+            for i in range(2):
+                if (wire_index + i, segment_index) in self.gates:
+                    for widget in self.gates[(wire_index, segment_index)]:
+                        self.canvas.delete(widget)
+                    del self.gates[(wire_index, segment_index)]
+            # if wire_index + 2 >= len(self.wire) - 1:
+            #     return
+            gate = self.canvas.create_rectangle(
+                gate_x - self.gate_size // 2,
+                gate_y - self.gate_size // 2,
+                gate_x + self.gate_size // 2,
+                gate_y + self.gate_size * 2.75,
+                fill="lightblue", tag=(f"{wire_index}{segment_index}",)
+            )
+
 
         text = self.canvas.create_text(gate_x, gate_y, text=self.selected_gate, tag=(f"{wire_index}{segment_index}",))
         self.gates[(wire_index, segment_index)] = [gate, text]

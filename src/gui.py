@@ -51,6 +51,26 @@ class GUI:
 
 		return True
 
+	def load_qasm_editor(self):
+		self.clear_frame()
+
+		header_label = Label(self.window, text="Raw OpenQASM Input", width=50, height=10, font=("Arial", 18))
+		header_label.pack()
+		
+		self.qasm_text = Text(self.window, height=20, width=150, font=("Arial", 16))
+		self.qasm_text.pack(side=TOP, padx=10, pady=5)
+
+		compile_experiment_button = Button(self.window, command=self.compile_experiment, text="Compile Experiment", font=("Arial", 16), width=18, height=1)
+		compile_experiment_button.pack(side=LEFT, padx=30, pady=5)
+
+		visualize_experiment_button = Button(self.window, command=self.load_visualizer, text="Visualize Experiment", font=("Arial", 16), width=18, height=1)
+		visualize_experiment_button.pack(side=RIGHT, padx=30, pady=5)
+
+		switch_type = Button(self.window, command=self.load_circuit_composer, text="Switch to Circuit Composer", font=("Arial", 16), width=18, height=1)
+		switch_type.pack(padx=30, pady=5)
+
+		return True
+	
 	def load_circuit_composer(self):
 		self.clear_frame()
 
@@ -65,6 +85,9 @@ class GUI:
 
 		visualize_experiment_button = Button(self.window, command=self.load_visualizer, text="Visualize Experiment", font=("Arial", 16), width=18, height=1)
 		visualize_experiment_button.pack(side=RIGHT, padx=30, pady=5)
+
+		switch_type = Button(self.window, command=self.load_qasm_editor, text="Switch to OpenQASM input", font=("Arial", 16), width=18, height=1)
+		switch_type.pack(padx=30, pady=5)
 
 		return True
 
@@ -175,7 +198,7 @@ class GUI:
 	def show_continue_button(self):
 		output_button = Button(self.window, command=self.load_output, text="See output state vector!", font=("Arial", 18), width=18, height=1)
 		output_button.pack(side=TOP, padx=10, pady=5)
-		
+
 		return True
 
 

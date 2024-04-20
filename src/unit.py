@@ -1,5 +1,11 @@
 import tkinter as tk
 
+GATE_DIMENSIONS = {
+    1: ["H", "X", "Y", "Z"],
+    2: ["CX", "CY", "CZ", "CP"],
+    3: ["CCZ", "PSCP"],
+}
+
 class QuantumComposer:
     def __init__(self, master):
         self.master = master
@@ -13,9 +19,9 @@ class QuantumComposer:
         self.y_start = 50
         self.wire_spacing = 60
 
-        self.wires = []  # List to hold wire IDs
+        self.wires = []
         self.gate_size = 30
-        self.gates = {}  # Dictionary to hold gate positions {(wire_index, segment_index): gate_id}
+        self.gates = {}
         self.num_segments = 10
 
         self.grid_size = (10, 6)
@@ -35,7 +41,7 @@ class QuantumComposer:
             self.wires.append((self.y_start + i * self.wire_spacing, wire_id))
 
     def draw_gate_buttons(self):
-        gates = ["H", "X", "Y", "Z", "CX"]
+        gates = ["H", "X", "Y", "Z", "CX", "CY", "CZ", "CP", "CCZ"]
         self.buttons = []
         for gate in gates:
             button = tk.Button(self.master, text=gate, command=lambda g=gate: self.select_gate(g))
@@ -56,6 +62,9 @@ class QuantumComposer:
     def place_gate(self, event):
         if event.x > self.x_end or event.y > self.y_start + len(self.wires) * self.wire_spacing:
             return
+
+        if not self.selected_gate:
+            return
         
         wire_index = round((event.y - self.y_start)/self.wire_spacing)
         segment_index = round((event.x - self.x_start)/self.gate_size)
@@ -71,9 +80,7 @@ class QuantumComposer:
         gate_x = self.x_start + segment_index * self.gate_size
         gate_y = self.y_start + wire_index * self.wire_spacing
 
-        single_gates = ["H", "X", "Y", "Z"]
-        gate = None
-        if (self.selected_gate in single_gates):
+        if self.selected_gate in GATE_DIMENSIONS[1]:
             gate = self.canvas.create_rectangle(
                 gate_x - self.gate_size // 2,
                 gate_y - self.gate_size // 2,
@@ -81,25 +88,38 @@ class QuantumComposer:
                 gate_y + self.gate_size // 2,
                 fill="lightblue", tag=(f"{wire_index}{segment_index}",)
             )
+
+            text = self.canvas.create_text(gate_x, gate_y, text=self.selected_gate, tag=(f"{wire_index}{segment_index}",))
+            
+            self.gates[(wire_index, segment_index)] = [gate, text]
         else:
-            for i in range(2):
+            gate_dimension = 0
+
+            for d, gates in GATE_DIMENSIONS.items():
+                if self.selected_gate in gates:
+                    gate_dimension = d
+            
+            if wire_index + gate_dimension > len(self.wires):
+                return
+
+            for i in range(gate_dimension):
                 if (wire_index + i, segment_index) in self.gates:
-                    for widget in self.gates[(wire_index, segment_index)]:
+                    for widget in self.gates[(wire_index + 1, segment_index)]:
                         self.canvas.delete(widget)
+                    
                     del self.gates[(wire_index, segment_index)]
-            # if wire_index + 2 >= len(self.wire) - 1:
-            #     return
+
             gate = self.canvas.create_rectangle(
                 gate_x - self.gate_size // 2,
                 gate_y - self.gate_size // 2,
                 gate_x + self.gate_size // 2,
-                gate_y + self.gate_size * 2.75,
+                gate_y + self.wire_spacing * (gate_dimension - 1) + self.gate_size // 2,
                 fill="lightblue", tag=(f"{wire_index}{segment_index}",)
             )
 
-
-        text = self.canvas.create_text(gate_x, gate_y, text=self.selected_gate, tag=(f"{wire_index}{segment_index}",))
-        self.gates[(wire_index, segment_index)] = [gate, text]
+            text = self.canvas.create_text(gate_x, gate_y + self.wire_spacing * (gate_dimension - 1) // 2, text=self.selected_gate, tag=(f"{wire_index}{segment_index}",))
+                
+            self.gates[(wire_index, segment_index)] = [gate, text]
 
         return True
 

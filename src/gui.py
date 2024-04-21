@@ -8,6 +8,7 @@ from simulation import Simulation
 
 from qiskit import QuantumCircuit, qasm3
 from qiskit.circuit import CircuitInstruction
+from qiskit.compiler import transpile
 
 GATE_DIMENSIONS = {
 	1: ["H", "X", "Y", "Z"],
@@ -15,12 +16,13 @@ GATE_DIMENSIONS = {
 	3: ["CCZ", "PSCP"],
 }
 
+DEFAULT_FONT = ("Arial", 24)
+CIRCUIT_COMPOSER_FONT = ("Arial", 16)
+
 class GUI:
 	def __init__(self, window_width=800, window_height=800):
 		self.window_width = window_width
 		self.window_height = window_height
-
-		self.default_font = ("Arial", 24)
 		
 		self.viz_length_scale = 1E-6/5
 		self.viz_time_scale = 10E-6 * 1000
@@ -56,7 +58,7 @@ class GUI:
 		header_label = Label(self.window, text="QuViz", font=("Arial", 36), width=20, height=10)
 		header_label.pack()
 
-		experiment_designer_button = Button(self.window, command=self.load_qasm_editor, text="Experiment Designer", font=self.default_font, width=18, height=1)
+		experiment_designer_button = Button(self.window, command=self.load_qasm_editor, text="Experiment Designer", font=DEFAULT_FONT, width=18, height=1)
 		experiment_designer_button.pack(side=TOP, padx=10, pady=5)
 
 		return True
@@ -64,7 +66,7 @@ class GUI:
 	def load_qasm_editor(self):
 		self.clear_frame()
 
-		header_label = Label(self.window, text="OpenQASM3 Input", width=50, height=6, font=self.default_font)
+		header_label = Label(self.window, text="OpenQASM3 Input", width=50, height=6, font=DEFAULT_FONT)
 		header_label.pack()
 
 		qasm_frame = Frame(self.window, width=150, height=50, borderwidth=3, background="black")
@@ -86,23 +88,23 @@ class GUI:
 		self.qubit_count_entry = Entry(qregister_frame, textvariable=self.qubit_count_var, width=3, font=("Arial", 16), highlightthickness=0, borderwidth=0, background="white")
 		self.qubit_count_entry.pack(side=LEFT, fill="x", padx=0, pady=0)
 		
-		qregister_post_label = Label(qregister_frame, width=5, text="]  qr;", font=("Arial", 16), background="white")
+		qregister_post_label = Label(qregister_frame, width=3, text="] qr;", font=("Arial", 16), background="white")
 		qregister_post_label.pack(side=LEFT, fill="x", padx=0, pady=0)
 
-		qregister_postfill_label = Label(qregister_frame, width=135, text="", font=("Arial", 16), background="white")
+		qregister_postfill_label = Label(qregister_frame, width=140, text="", font=("Arial", 16), background="white")
 		qregister_postfill_label.pack(side=LEFT, fill="x", padx=0, pady=0)
 		
 		self.qasm_text = Text(qasm_frame, undo=True, width=150, height=30, font=("Arial", 16), highlightthickness=0, borderwidth=0)
 		self.qasm_text.insert(1.0, f"// Your code starts here!")
 		self.qasm_text.pack(side=TOP, padx=0, pady=0)
 
-		compile_experiment_button = Button(self.window, command=self.compile_experiment, text="Compile Experiment", font=self.default_font, width=18, height=1)
+		compile_experiment_button = Button(self.window, command=self.compile_experiment, text="Compile Experiment", font=DEFAULT_FONT, width=18, height=1)
 		compile_experiment_button.pack(side=LEFT, padx=100, pady=0)
 
-		visualize_experiment_button = Button(self.window, command=self.load_visualizer, text="Visualize Experiment", font=self.default_font, width=18, height=1)
+		visualize_experiment_button = Button(self.window, command=self.load_visualizer, text="Visualize Experiment", font=DEFAULT_FONT, width=18, height=1)
 		visualize_experiment_button.pack(side=RIGHT, padx=100, pady=0)
 
-		switch_type = Button(self.window, command=self.load_circuit_composer, text="Switch to Circuit Composer", font=self.default_font, width=24, height=1)
+		switch_type = Button(self.window, command=self.load_circuit_composer, text="Switch to Circuit Composer", font=DEFAULT_FONT, width=24, height=1)
 		switch_type.pack(padx=30, pady=30)
 
 		self.experiment_input_method = "OpenQASM3 Input"
@@ -117,7 +119,7 @@ class GUI:
 	def load_circuit_composer(self):
 		self.clear_frame()
 
-		header_label = Label(self.window, text="Circuit Composer", width=50, height=10, font=("Arial", 18))
+		header_label = Label(self.window, text="Circuit Composer", width=80, height=10, font=("Arial", 18))
 		header_label.pack()
 
 		self.circuit_composer_frame = Frame(self.window)
@@ -125,13 +127,13 @@ class GUI:
 		
 		self.circuit_composer = CircuitComposer(self.circuit_composer_frame)
 
-		compile_experiment_button = Button(self.window, command=self.compile_experiment, text="Compile Experiment", font=self.default_font, width=18, height=1)
+		compile_experiment_button = Button(self.window, command=self.compile_experiment, text="Compile Experiment", font=DEFAULT_FONT, width=18, height=1)
 		compile_experiment_button.pack(side=LEFT, padx=30, pady=5)
 
-		visualize_experiment_button = Button(self.window, command=self.load_visualizer, text="Visualize Experiment", font=self.default_font, width=18, height=1)
+		visualize_experiment_button = Button(self.window, command=self.load_visualizer, text="Visualize Experiment", font=DEFAULT_FONT, width=18, height=1)
 		visualize_experiment_button.pack(side=RIGHT, padx=30, pady=5)
 
-		switch_type = Button(self.window, command=self.load_qasm_editor, text="Switch to OpenQASM3 input", font=self.default_font, width=24, height=1)
+		switch_type = Button(self.window, command=self.load_qasm_editor, text="Switch to OpenQASM3 input", font=DEFAULT_FONT, width=24, height=1)
 		switch_type.pack(padx=30, pady=5)
 
 		self.experiment_input_method = "Circuit Composer"
@@ -141,81 +143,99 @@ class GUI:
 	def compile_experiment(self):
 		n_qubits = 0
 		if self.experiment_input_method == "OpenQASM3 Input":
-			n_qubits_raw = self.qubit_count_entry.get(1.0, "end-1c")
+			n_qubits_raw = self.qubit_count_var.get()
 
 			if n_qubits_raw.isdigit():
 				n_qubits = int(n_qubits_raw)
-			else:
-				return False
-		elif self.experiment_input_method == "CircuitComposer":
+		elif self.experiment_input_method == "Circuit Composer":
 			n_qubits = len(self.circuit_composer.wires)
 		
 		if n_qubits == 0:
+			print("Cannot compile circuit with no wires!")
 			# @ TODO - Communicate compilation error (e.g. popup)
 			return False
 		
-		print(f"n_qubits: {n_qubits}")
-
 		# Parse circuit input into Qiskit QuantumCircuit
-		qasm_str = ""
-		if self.qasm_text:
-			qasm_str = self.qasm_text.get(1.0, "end-1c")
+		qasm_str = f"OPENQASM 3;\n\ninclude \"stdgates.inc\";\nqubit[{n_qubits}] qr;\n"
+		if self.experiment_input_method == "OpenQASM3 Input":
+			qasm_str += self.qasm_text.get(1.0, "end-1c")
+		elif self.experiment_input_method == "Circuit Composer":
+			n_layers = self.circuit_composer.num_segments
+
+			for layer in range(n_layers):
+				visited_gates = []
+
+				for wire_index in range(n_qubits):
+					if (wire_index, layer) in self.circuit_composer.gates:
+						gate_tags = self.circuit_composer.canvas.gettags(self.circuit_composer.gates[(wire_index, layer)][0])
+						gate_info = list(filter(lambda gate_tag : True if gate_tag.startswith("@") else False, gate_tags))[0][1:].lower()
+
+						if gate_info in visited_gates:
+							continue
+						else:
+							visited_gates.append(gate_info)
+
+						instruction_name = gate_info.split("|")[0]
+
+						parameters = gate_info.split("|")[1].split(",")
+
+						start_qubit = int(gate_info.split("|")[2].split(":")[0])
+						stop_qubit = int(gate_info.split("|")[2].split(":")[1].split(",")[0])+1
+						qubits = list(range(start_qubit,stop_qubit))
+
+						qasm_line = f"{instruction_name}"
+
+						if parameters[0] != "":
+							parameters = ",".join(parameters)
+							qasm_line += f"({parameters})"
+
+						for qubit in qubits:
+							qasm_line += f" qr[{qubit}],"
+
+						qasm_line = qasm_line[:-1]
+						qasm_line += ";\n"
+
+						qasm_str += qasm_line
+
+		print(f"--------------------------\n{qasm_str}\n--------------------------")
 
 		try:
 			original_circuit = qasm3.loads(qasm_str)
 		except qasm3.QASM3ImporterError:
+			# @ TODO - Communicate compilation error (e.g. popup)
 			print("Failed to compile OpenQASM3 input! Please check your syntax.")
-
-		# 	return
+			return False
 		
-		# basis_gate_operations = []
-		
-		# # @TODO - Decompose QuantumCircuit into program-native circuit
-		# native_circuit_data = []
-		# for l in range(len(original_circuit.depth())):
-		# 	# Get the circuit instruction(s?) at this position
-		# 	circuit_instruction = original_circuit.data[l]
-		# 	print(circuit_instruction)
-			
-		# 	if circuit_instruction.operation in basis_gate_operations:
-		# 		native_circuit_data.append(circuit_instruction)
-		# 	else:
-		# 		# @TODO - Decompose non-basis gate into basis gates
-		# 		pass
-		
-		# # Create a new QuantumCircuit with the basis gate-decomposed circuit
-		# native_circuit = QuantumCircuit(n_qubits)
-		# native_circuit.data = native_circuit_data
+		basis_gates_choice = ["id", "u", "cz", "ccz", "cp"]
+		decomposed_circuit = transpile(original_circuit, basis_gates=basis_gates_choice, optimization_level=0)
+		decomposed_circuit.draw("mpl", filename="decomposed_circuit.png")
 
 		circuit = []
+
+		occupied_qubits = []
+		circuit.append([])
+		for circuit_instruction in decomposed_circuit.data:
+			instruction = circuit_instruction.operation
+			instruction_name = instruction.name.upper()
+			parameters = instruction.params
+			qubits = [qubit._index for qubit in circuit_instruction.qubits]
+			
+			# Create new layer if one of the qubits is already occupied in the current layer
+			for qubit in qubits:
+				if qubit in occupied_qubits:
+					circuit.append([])
+					occupied_qubits = []
+					break
+			
+			occupied_qubits.extend(qubits)
+			
+			circuit[-1].append({"instruction": instruction_name, "parameters": parameters, "qubits": qubits})
+		
+		print(circuit)
   
-		# @TODO - parse other experiment parameters
-		parameters = {}
-
-		##########################################################################################
-  		# TEST EXPERIMENT START
-		n_qubits = 11
-		circuit = [
-			[{"instruction": "CZ", "qubits": [0, 1]}],
-			# [{"instruction": "CZ", "qubits": [0, 1]}, {"instruction": "CZ", "qubits": [2, 3]}],
-			[{"instruction": "CZ", "qubits": [2, 3]}],
-			[{"instruction": "CZ", "qubits": [1, 2]}],
-			# [{"instruction": "CZ", "qubits": [i, i+1]}] for i in range(9)
-			# [{"instruction": "H", "qubits": [0]}],
-			# [{"instruction": "CZ", "qubits": [0, 1]}],
-			# [{"instruction": "H", "qubits": [0]}],
-			# [{"instruction": "CCZ", "qubits": [2, 3, 4]}],
-			# [{"instruction": "H", "qubits": [2, 4]}],
-			# [{"instruction": "CCCZ", "qubits": [5, 6, 7, 8]}],
-			# [{"instruction": "CCCCZ", "qubits": [3, 4, 5, 6, 7]}],
-			# [{"instruction": "CCCCCZ", "qubits": [0, 2, 4, 6, 8, 9]}],
-   			# [{"instruction": "CP", "qubits": [9, 10]}],
-		]
+		# @TODO - parse user input for experiment parameters
 		parameters = hardware_presets.DEFAULT
-		# TEST EXPERIMENT STOP
-		##########################################################################################
 
-		# @TODO - turn into experiment
 		current_experiment = {
 			"n_qubits": n_qubits,
 			"circuit": circuit,
@@ -247,13 +267,13 @@ class GUI:
 		text_label.pack(pady=10)
 		text_label.config(text="Filler text!!! \nLorem ipsum dolor sit amet, consectetur adipiscing elit. Sed non risus. Suspendisse lectus tortor, dignissim sit amet, adipiscing nec, ultricies sed, dolor.")
 
-		main_menu_button = Button(self.window, text="Main Menu", command=self.load_main_menu, font=self.default_font, width=18, height=1)
+		main_menu_button = Button(self.window, text="Main Menu", command=self.load_main_menu, font=DEFAULT_FONT, width=18, height=1)
 		main_menu_button.pack(side=TOP, padx=10, pady=5)
 
 		return True
 	
 	def show_continue_button(self):
-		output_button = Button(self.window, command=self.load_output, text="See output state vector!", font=self.default_font, width=18, height=1)
+		output_button = Button(self.window, command=self.load_output, text="See output state vector!", font=DEFAULT_FONT, width=18, height=1)
 		output_button.pack(side=TOP, padx=10, pady=5)
 
 		return True
@@ -268,24 +288,22 @@ class GUI:
 class CircuitComposer:
 	def __init__(self, master):
 		self.master = master
-		
-		self.canvas = Canvas(master, width=600, height=400, bg="white")
-		self.canvas.pack(side=TOP, fill=BOTH, expand=True)
+
+		self.num_segments = 25
+		self.gate_size = 30
+		self.wire_spacing = 2 * self.gate_size
 
 		self.x_start = 100
-		self.x_end = 500
+		self.x_end = self.num_segments * self.gate_size
 		self.y_start = 50
-		self.wire_spacing = 60
 
 		self.wires = []
-		self.gate_size = 30
 		self.gates = {}
-		self.num_segments = 10
-
-		self.grid_size = (10, 6)
 
 		self.selected_gate = None
-		self.drag_data = {"item": None, "x": 0, "y": 0}
+		
+		self.canvas = Canvas(master, width=800, height=600, bg="white")
+		self.canvas.pack(side=TOP, fill=BOTH, expand=True)
 
 		self.draw_wires()
 
@@ -295,8 +313,28 @@ class CircuitComposer:
 
 	def draw_wires(self):
 		for i in range(5):
-			wire_id = self.canvas.create_line(self.x_start, self.y_start + i * self.wire_spacing, self.x_end, self.y_start + i * self.wire_spacing, width=2)
-			self.wires.append((self.y_start + i * self.wire_spacing, wire_id))
+			label = self.canvas.create_text(
+				self.x_start - self.gate_size,
+				self.y_start + i * self.wire_spacing,
+				text="|0⟩", font=CIRCUIT_COMPOSER_FONT,
+				anchor="e", tags=("qubit_label", f"qubit_{i}"),
+			)
+
+			# Bind toggle function to labels
+			self.canvas.tag_bind(label, "<Button-1>", lambda event, idx=i : self.toggle_qubit(idx))
+
+			wire = self.canvas.create_line(self.x_start, self.y_start + i * self.wire_spacing, self.x_end, self.y_start + i * self.wire_spacing, width=2)
+			self.wires.append((self.y_start + i * self.wire_spacing, wire))
+
+	def toggle_qubit(self, idx):
+		# Get current text of the clicked label
+		current_text = self.canvas.itemcget(f"qubit_{idx}", "text")
+
+		# Toggle the text between "|0>" and "|1>"
+		new_text = "|1⟩" if current_text == "|0⟩" else "|0⟩"
+
+		# Update the text of the clicked label
+		self.canvas.itemconfigure(f"qubit_{idx}", text=new_text, fill="black")
 
 	def draw_gate_buttons(self):
 		gates = ["H", "X", "Y", "Z", "CX", "CY", "CZ", "CP", "CCZ"]
@@ -343,19 +381,21 @@ class CircuitComposer:
 				del self.gates[(wire_index, segment_index)]
 				
 				return
+			
+			gate_tag = f"@{self.selected_gate}||{wire_index}:{wire_index},{segment_index}"
 		
 			gate = self.canvas.create_rectangle(
 				gate_x - self.gate_size // 2,
 				gate_y - self.gate_size // 2,
 				gate_x + self.gate_size // 2,
 				gate_y + self.gate_size // 2,
-				fill="lightblue", tag=(f"{wire_index}:{wire_index},{segment_index}",)
+				fill="lightblue", tag=(gate_tag,)
 			)
 
 			text = self.canvas.create_text(
 				gate_x,
 				gate_y,
-				text=self.selected_gate, tag=(f"{wire_index}:{wire_index},{segment_index}",)
+				text=self.selected_gate, tag=(gate_tag,)
 			)
 			
 			self.gates[(wire_index, segment_index)] = [gate, text]
@@ -380,25 +420,25 @@ class CircuitComposer:
 						self.canvas.delete(widget)
 					
 					del self.gates[(wire_index + i, segment_index)]
+			
+			gate_tag = f"@{self.selected_gate}||{wire_index}:{wire_index+gate_dimension-1},{segment_index}"
 
 			gate = self.canvas.create_rectangle(
 				gate_x - self.gate_size // 2,
 				gate_y - self.gate_size // 2,
 				gate_x + self.gate_size // 2,
 				gate_y + self.wire_spacing * (gate_dimension - 1) + self.gate_size // 2,
-				fill="lightblue", tag=(f"{wire_index}:{wire_index+gate_dimension-1},{segment_index}",)
+				fill="lightblue", tag=(gate_tag,)
 			)
 
 			text = self.canvas.create_text(
 				gate_x,
 				gate_y + self.wire_spacing * (gate_dimension - 1) // 2,
-				text=self.selected_gate, tag=(f"{wire_index}:{wire_index+gate_dimension-1},{segment_index}",)
+				text=self.selected_gate, tag=(gate_tag,)
 			)
 
 			for i in range(gate_dimension):
 				self.gates[(wire_index + i, segment_index)] = [gate, text]
-			
-			# self.gates[(wire_index, segment_index)] = [gate, text]
 
 		return True
 

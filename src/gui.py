@@ -1,6 +1,5 @@
 import numpy as np
-from threading import Lock
-import datetime
+import re
 
 from tkinter import *
 
@@ -20,6 +19,8 @@ class GUI:
 	def __init__(self, window_width=800, window_height=800):
 		self.window_width = window_width
 		self.window_height = window_height
+
+		self.default_font = ("Arial", 24)
 		
 		self.viz_length_scale = 1E-6/5
 		self.viz_time_scale = 10E-6 * 1000
@@ -31,6 +32,9 @@ class GUI:
 		self.qubit_radius = 1E-6/self.viz_length_scale
 		self.movement_step_time = 1
 
+		self.experiment_input_method = None
+
+		self.qubit_count_entry = None
 		self.qasm_text = None
 
 		self.temporaryStorage = {}
@@ -52,7 +56,7 @@ class GUI:
 		header_label = Label(self.window, text="QuViz", font=("Arial", 36), width=20, height=10)
 		header_label.pack()
 
-		experiment_designer_button = Button(self.window, command=self.load_qasm_editor, text="Experiment Designer", font=("Arial", 24), width=18, height=1)
+		experiment_designer_button = Button(self.window, command=self.load_qasm_editor, text="Experiment Designer", font=self.default_font, width=18, height=1)
 		experiment_designer_button.pack(side=TOP, padx=10, pady=5)
 
 		return True
@@ -60,11 +64,11 @@ class GUI:
 	def load_qasm_editor(self):
 		self.clear_frame()
 
-		header_label = Label(self.window, text="OpenQASM3 Input", width=50, height=6, font=("Arial", 16))
+		header_label = Label(self.window, text="OpenQASM3 Input", width=50, height=6, font=self.default_font)
 		header_label.pack()
 
-		qasm_frame = Frame(self.window, width=150, height=50)
-		qasm_frame.pack(side=LEFT, fill="x", padx=500, pady=0)
+		qasm_frame = Frame(self.window, width=150, height=50, borderwidth=3, background="black")
+		qasm_frame.pack(side=TOP, fill="x", padx=500, pady=0)
 
 		preamble_text = Text(qasm_frame, width=150, height=3, font=("Arial", 16), background="white")
 		preamble_text.insert(1.0, f"OPENQASM 3;\n\ninclude \"stdgates.inc\";")
@@ -77,9 +81,10 @@ class GUI:
 		qregister_pre_label = Label(qregister_frame, width=4, height=1, text="qubit[", font=("Arial", 16), background="white")
 		qregister_pre_label.pack(side=LEFT, fill="x", padx=0, pady=0)
 
-		qregister_in_text = Text(qregister_frame, width=3, height=1, font=("Arial", 16), highlightthickness=0, borderwidth=0, background="white")
-		qregister_in_text.bind('<<Modified>>', lambda *args: qregister_in_text.set(qregister_in_text.get()[:4]))
-		qregister_in_text.pack(side=LEFT, fill="x", padx=0, pady=0)
+		self.qubit_count_var = StringVar()
+		self.qubit_count_var.trace_add("write", self.qubit_count_filter)
+		self.qubit_count_entry = Entry(qregister_frame, textvariable=self.qubit_count_var, width=3, font=("Arial", 16), highlightthickness=0, borderwidth=0, background="white")
+		self.qubit_count_entry.pack(side=LEFT, fill="x", padx=0, pady=0)
 		
 		qregister_post_label = Label(qregister_frame, width=5, text="]  qr;", font=("Arial", 16), background="white")
 		qregister_post_label.pack(side=LEFT, fill="x", padx=0, pady=0)
@@ -91,17 +96,24 @@ class GUI:
 		self.qasm_text.insert(1.0, f"// Your code starts here!")
 		self.qasm_text.pack(side=TOP, padx=0, pady=0)
 
-		compile_experiment_button = Button(self.window, command=self.compile_experiment, text="Compile Experiment", font=("Arial", 16), width=18, height=1)
-		compile_experiment_button.pack(side=LEFT, padx=30, pady=5)
+		compile_experiment_button = Button(self.window, command=self.compile_experiment, text="Compile Experiment", font=self.default_font, width=18, height=1)
+		compile_experiment_button.pack(side=LEFT, padx=100, pady=0)
 
-		visualize_experiment_button = Button(self.window, command=self.load_visualizer, text="Visualize Experiment", font=("Arial", 16), width=18, height=1)
-		visualize_experiment_button.pack(side=RIGHT, padx=30, pady=5)
+		visualize_experiment_button = Button(self.window, command=self.load_visualizer, text="Visualize Experiment", font=self.default_font, width=18, height=1)
+		visualize_experiment_button.pack(side=RIGHT, padx=100, pady=0)
 
-		switch_type = Button(self.window, command=self.load_circuit_composer, text="Switch to Circuit Composer", font=("Arial", 24), width=24, height=1)
-		switch_type.pack(padx=30, pady=5)
+		switch_type = Button(self.window, command=self.load_circuit_composer, text="Switch to Circuit Composer", font=self.default_font, width=24, height=1)
+		switch_type.pack(padx=30, pady=30)
+
+		self.experiment_input_method = "OpenQASM3 Input"
 
 		return True
 	
+	def qubit_count_filter(self, var, index, mode):
+		filtered_text = re.sub(r'\D', '', self.qubit_count_var.get()[:3])
+		self.qubit_count_var.set(filtered_text)
+		return
+
 	def load_circuit_composer(self):
 		self.clear_frame()
 
@@ -113,30 +125,46 @@ class GUI:
 		
 		self.circuit_composer = CircuitComposer(self.circuit_composer_frame)
 
-		compile_experiment_button = Button(self.window, command=self.compile_experiment, text="Compile Experiment", font=("Arial", 16), width=18, height=1)
+		compile_experiment_button = Button(self.window, command=self.compile_experiment, text="Compile Experiment", font=self.default_font, width=18, height=1)
 		compile_experiment_button.pack(side=LEFT, padx=30, pady=5)
 
-		visualize_experiment_button = Button(self.window, command=self.load_visualizer, text="Visualize Experiment", font=("Arial", 16), width=18, height=1)
+		visualize_experiment_button = Button(self.window, command=self.load_visualizer, text="Visualize Experiment", font=self.default_font, width=18, height=1)
 		visualize_experiment_button.pack(side=RIGHT, padx=30, pady=5)
 
-		switch_type = Button(self.window, command=self.load_qasm_editor, text="Switch to OpenQASM input", font=("Arial", 24), width=24, height=1)
+		switch_type = Button(self.window, command=self.load_qasm_editor, text="Switch to OpenQASM3 input", font=self.default_font, width=24, height=1)
 		switch_type.pack(padx=30, pady=5)
+
+		self.experiment_input_method = "Circuit Composer"
 
 		return True
 
 	def compile_experiment(self):
-		# @TODO - parse number of qubits
 		n_qubits = 0
+		if self.experiment_input_method == "OpenQASM3 Input":
+			n_qubits_raw = self.qubit_count_entry.get(1.0, "end-1c")
 
-		# # Parse circuit input into Qiskit QuantumCircuit
-		# qasm_str = ""
-		# if self.qasm_text:
-		# 	qasm_str = self.qasm_text.get(1.0, "end-1c")
+			if n_qubits_raw.isdigit():
+				n_qubits = int(n_qubits_raw)
+			else:
+				return False
+		elif self.experiment_input_method == "CircuitComposer":
+			n_qubits = len(self.circuit_composer.wires)
+		
+		if n_qubits == 0:
+			# @ TODO - Communicate compilation error (e.g. popup)
+			return False
+		
+		print(f"n_qubits: {n_qubits}")
 
-		# try:
-		# 	original_circuit = qasm3.loads(qasm_str)
-		# except qasm3.QASM3ImporterError:
-		# 	print("Failed to compile OpenQASM3 input! Please check your syntax.")
+		# Parse circuit input into Qiskit QuantumCircuit
+		qasm_str = ""
+		if self.qasm_text:
+			qasm_str = self.qasm_text.get(1.0, "end-1c")
+
+		try:
+			original_circuit = qasm3.loads(qasm_str)
+		except qasm3.QASM3ImporterError:
+			print("Failed to compile OpenQASM3 input! Please check your syntax.")
 
 		# 	return
 		
@@ -219,13 +247,13 @@ class GUI:
 		text_label.pack(pady=10)
 		text_label.config(text="Filler text!!! \nLorem ipsum dolor sit amet, consectetur adipiscing elit. Sed non risus. Suspendisse lectus tortor, dignissim sit amet, adipiscing nec, ultricies sed, dolor.")
 
-		main_menu_button = Button(self.window, text="Main Menu", command=self.load_main_menu, font=("Arial", 24), width=18, height=1)
+		main_menu_button = Button(self.window, text="Main Menu", command=self.load_main_menu, font=self.default_font, width=18, height=1)
 		main_menu_button.pack(side=TOP, padx=10, pady=5)
 
 		return True
 	
 	def show_continue_button(self):
-		output_button = Button(self.window, command=self.load_output, text="See output state vector!", font=("Arial", 24), width=18, height=1)
+		output_button = Button(self.window, command=self.load_output, text="See output state vector!", font=self.default_font, width=18, height=1)
 		output_button.pack(side=TOP, padx=10, pady=5)
 
 		return True

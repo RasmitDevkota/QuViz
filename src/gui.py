@@ -10,6 +10,12 @@ from simulation import Simulation
 from qiskit import QuantumCircuit, qasm3
 from qiskit.circuit import CircuitInstruction
 
+GATE_DIMENSIONS = {
+    1: ["H", "X", "Y", "Z"],
+    2: ["CX", "CY", "CZ", "CP"],
+    3: ["CCZ", "PSCP"],
+}
+
 class GUI:
 	def __init__(self, window_width=800, window_height=800):
 		self.window_width = window_width
@@ -66,7 +72,7 @@ class GUI:
 		visualize_experiment_button = Button(self.window, command=self.load_visualizer, text="Visualize Experiment", font=("Arial", 16), width=18, height=1)
 		visualize_experiment_button.pack(side=RIGHT, padx=30, pady=5)
 
-		switch_type = Button(self.window, command=self.load_circuit_composer, text="Switch to Circuit Composer", font=("Arial", 16), width=18, height=1)
+		switch_type = Button(self.window, command=self.load_circuit_composer, text="Switch to Circuit Composer", font=("Arial", 24), width=24, height=1)
 		switch_type.pack(padx=30, pady=5)
 
 		return True
@@ -76,9 +82,11 @@ class GUI:
 
 		header_label = Label(self.window, text="Circuit Composer", width=50, height=10, font=("Arial", 18))
 		header_label.pack()
+
+		self.circuit_composer_frame = Frame(self.window)
+		self.circuit_composer_frame.pack()
 		
-		self.qasm_text = Text(self.window, height=20, width=150, font=("Arial", 16))
-		self.qasm_text.pack(side=TOP, padx=10, pady=5)
+		self.circuit_composer = CircuitComposer(self.circuit_composer_frame)
 
 		compile_experiment_button = Button(self.window, command=self.compile_experiment, text="Compile Experiment", font=("Arial", 16), width=18, height=1)
 		compile_experiment_button.pack(side=LEFT, padx=30, pady=5)
@@ -86,7 +94,7 @@ class GUI:
 		visualize_experiment_button = Button(self.window, command=self.load_visualizer, text="Visualize Experiment", font=("Arial", 16), width=18, height=1)
 		visualize_experiment_button.pack(side=RIGHT, padx=30, pady=5)
 
-		switch_type = Button(self.window, command=self.load_qasm_editor, text="Switch to OpenQASM input", font=("Arial", 16), width=18, height=1)
+		switch_type = Button(self.window, command=self.load_qasm_editor, text="Switch to OpenQASM input", font=("Arial", 24), width=24, height=1)
 		switch_type.pack(padx=30, pady=5)
 
 		return True
@@ -209,3 +217,132 @@ class GUI:
 
 		return True
 
+class CircuitComposer:
+    def __init__(self, master):
+        self.master = master
+        # self.master.title("Quantum Circuit Composer")
+
+        self.canvas = Canvas(master, width=600, height=400, bg="white")
+        self.canvas.pack(side=TOP, fill=BOTH, expand=True)
+
+        self.x_start = 100
+        self.x_end = 500
+        self.y_start = 50
+        self.wire_spacing = 60
+
+        self.wires = []
+        self.gate_size = 30
+        self.gates = {}
+        self.num_segments = 10
+
+        self.grid_size = (10, 6)
+
+        self.selected_gate = None
+        self.drag_data = {"item": None, "x": 0, "y": 0}
+
+        self.draw_wires()
+
+        self.draw_gate_buttons()
+
+        self.canvas.bind("<Button-1>", self.place_gate)
+
+    def draw_wires(self):
+        for i in range(5):
+            wire_id = self.canvas.create_line(self.x_start, self.y_start + i * self.wire_spacing, self.x_end, self.y_start + i * self.wire_spacing, width=2)
+            self.wires.append((self.y_start + i * self.wire_spacing, wire_id))
+
+    def draw_gate_buttons(self):
+        gates = ["H", "X", "Y", "Z", "CX", "CY", "CZ", "CP", "CCZ"]
+        self.buttons = []
+        for gate in gates:
+            button = Button(self.master, text=gate, command=lambda g=gate: self.select_gate(g))
+            button.pack(side=TOP, padx=10, pady=5, fill=X)
+            self.buttons.append(button)
+
+        # add_wire_button = Button(self.master, text="Add Wire", command=self.add_wire)
+        # add_wire_button.pack(side=TOP, padx=10, pady=5, fill=X)
+        # self.buttons.append(add_wire_button)
+
+        # remove_wire_button = Button(self.master, text="Remove Wire", command=self.remove_wire)
+        # remove_wire_button.pack(side=TOP, padx=10, pady=5, fill=X)
+        # self.buttons.append(remove_wire_button)
+
+    def select_gate(self, gate):
+        self.selected_gate = gate
+
+    def place_gate(self, event):
+        if event.x > self.x_end or event.y > self.y_start + len(self.wires) * self.wire_spacing:
+            return
+
+        if not self.selected_gate:
+            return
+        
+        wire_index = round((event.y - self.y_start)/self.wire_spacing)
+        segment_index = round((event.x - self.x_start)/self.gate_size)
+
+        if (wire_index, segment_index) in self.gates:
+            for widget in self.gates[(wire_index, segment_index)]:
+                self.canvas.delete(widget)
+            
+            del self.gates[(wire_index, segment_index)]
+            
+            return
+
+        gate_x = self.x_start + segment_index * self.gate_size
+        gate_y = self.y_start + wire_index * self.wire_spacing
+
+        if self.selected_gate in GATE_DIMENSIONS[1]:
+            gate = self.canvas.create_rectangle(
+                gate_x - self.gate_size // 2,
+                gate_y - self.gate_size // 2,
+                gate_x + self.gate_size // 2,
+                gate_y + self.gate_size // 2,
+                fill="lightblue", tag=(f"{wire_index}{segment_index}",)
+            )
+
+            text = self.canvas.create_text(gate_x, gate_y, text=self.selected_gate, tag=(f"{wire_index}{segment_index}",))
+            
+            self.gates[(wire_index, segment_index)] = [gate, text]
+        else:
+            gate_dimension = 0
+
+            for d, gates in GATE_DIMENSIONS.items():
+                if self.selected_gate in gates:
+                    gate_dimension = d
+            
+            if wire_index + gate_dimension > len(self.wires):
+                return
+
+            for i in range(gate_dimension):
+                if (wire_index + i, segment_index) in self.gates:
+                    for widget in self.gates[(wire_index + 1, segment_index)]:
+                        self.canvas.delete(widget)
+                    
+                    del self.gates[(wire_index, segment_index)]
+
+            gate = self.canvas.create_rectangle(
+                gate_x - self.gate_size // 2,
+                gate_y - self.gate_size // 2,
+                gate_x + self.gate_size // 2,
+                gate_y + self.wire_spacing * (gate_dimension - 1) + self.gate_size // 2,
+                fill="lightblue", tag=(f"{wire_index}{segment_index}",)
+            )
+
+            text = self.canvas.create_text(gate_x, gate_y + self.wire_spacing * (gate_dimension - 1) // 2, text=self.selected_gate, tag=(f"{wire_index}{segment_index}",))
+                
+            self.gates[(wire_index, segment_index)] = [gate, text]
+
+        return True
+
+    # def add_wire(self):
+    #     y = self.wires[-1][0] + 60
+    #     wire_id = self.canvas.create_line(100, y, 500, y, width=2)
+    #     self.wires.append((y, wire_id))
+
+    # def remove_wire(self):
+    #     if len(self.wires) > 1:
+    #         _, wire_id = self.wires.pop()
+    #         self.canvas.delete(wire_id)
+    #         for segment in self.gates.copy():
+    #             if segment[0] == len(self.wires):
+    #                 self.canvas.delete(self.gates.pop(segment))

@@ -2,6 +2,13 @@ import numpy as np
 from threading import Lock
 import re
 
+import matplotlib
+from matplotlib.figure import Figure
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+matplotlib.use('TkAgg')
+
+from qiskit.quantum_info import Statevector
+
 class Simulation:
 	def __init__(self, experiment, gui):
 		# @TODO - load/store the other important variables that the user can give us
@@ -52,7 +59,7 @@ class Simulation:
 		print("executing next layer...")
 
 		layer_ops = self.layer_queue[0]
-
+		
 		if len(layer_ops) == 0:
 			self.layer_queue.pop(0)
 
@@ -60,6 +67,7 @@ class Simulation:
 				self.execute_next_layer()
 			else:
 				print("finished executing all layers!")
+				self.gui.show_continue_button()
 			
 			return
 
@@ -78,6 +86,9 @@ class Simulation:
 		self.qubits = []
 
 		self.circuit = experiment["circuit"]
+
+		self.qiskit_circuit = experiment["qiskit_circuit"]
+		self.final_statevector = Statevector.from_instruction(self.qiskit_circuit)
 
 		self.parameters = experiment["parameters"]
 
@@ -238,17 +249,6 @@ class Simulation:
 			initial_state = initial_state_raw
 
 			self.qubits[q]["state"] = initial_state
-
-		return True
-
-	# @TODO - Reformulate using Statevector
-	def apply_unitary(self, qubit, theta, alpha, beta):
-		unitary_matrix = np.array([
-			[np.cos(theta/2), -np.exp(1j * beta) * np.sin(theta/2)],
-			[np.exp(1j * alpha) * np.sin(theta/2), np.exp(1j * (alpha + beta)) * np.cos(theta/2)]
-		])
-
-		self.qubits[qubit]["state"] = np.matmul(unitary_matrix, self.qubits[qubit]["state"])
 
 		return True
 
@@ -543,11 +543,12 @@ class Simulation:
 
 	def run_experiment(self, experiment=None):
 		if experiment:
-			self.load_experiment(experiment)
 			self.compile_experiment(experiment)
 
 		print("running experiment...")
 
 		self.execute_next_layer()
+
+		print("executed first layer!")
 
 		return True

@@ -3,12 +3,17 @@ import re
 
 from tkinter import *
 
+import matplotlib
+from matplotlib.figure import Figure
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+matplotlib.use('TkAgg')
+
 import hardware_presets
 from simulation import Simulation
 
-from qiskit import QuantumCircuit, qasm3
-from qiskit.circuit import CircuitInstruction
+from qiskit import qasm3
 from qiskit.compiler import transpile
+from qiskit.quantum_info import Statevector
 
 GATE_DIMENSIONS = {
 	1: ["H", "X", "Y", "Z"],
@@ -239,6 +244,7 @@ class GUI:
 		current_experiment = {
 			"n_qubits": n_qubits,
 			"circuit": circuit,
+			"qiskit_circuit": decomposed_circuit,
 			"parameters": parameters,
 		}
 
@@ -263,15 +269,44 @@ class GUI:
 	def load_output(self):
 		self.clear_frame()
 	
-		text_label = Label(self.window, text="", wraplength=400, width=100, height=40)
-		text_label.pack(pady=10)
-		text_label.config(text="Filler text!!! \nLorem ipsum dolor sit amet, consectetur adipiscing elit. Sed non risus. Suspendisse lectus tortor, dignissim sit amet, adipiscing nec, ultricies sed, dolor.")
+		text_label = Label(self.window, text="Experiment results", width=50, height=1, font=DEFAULT_FONT)
+		text_label.pack(pady=5)
+
+		output_frame = Frame(self.window, width=150, height=10, borderwidth=3, background="black")
+		output_frame.pack(side=TOP, padx=50, pady=0, fill="x", expand=True)
+		
+		# Display decomposed circuit
+		circuit_figure = self.temporaryStorage["current_experiment"]["qiskit_circuit"].draw("mpl")
+		circuit_figure_canvas = FigureCanvasTkAgg(circuit_figure, output_frame)
+		circuit_figure_canvas.get_tk_widget().pack(side=TOP, padx=0, pady=0, fill="x", expand=True)
+
+		# Display final statevector
+		statevector_latex = Statevector(self.temporaryStorage["current_experiment"]["qiskit_circuit"]).draw("latex_source")
+		statevector_plaintext = statevector_latex.replace("\\rangle", "⟩").replace("\\frac", "").replace("\\sqrt", "sqrt").replace("}{", "/").replace("{", "").replace("}", "").replace("+", " + ")
+
+		statevector_label = Label(output_frame, text="Final statevector: " + statevector_plaintext, width=50, height=1, font=DEFAULT_FONT)
+		statevector_label.pack(side=BOTTOM, padx=0, pady=0, fill="x", expand=True)
+		
+		# statevector_figure = Figure(figsize=(5, 1), dpi=100, frameon=False)
+		# statevector_figure.patch.set_visible(False)
+
+		# statevector_figure_canvas = FigureCanvasTkAgg(statevector_figure, output_frame)
+		# statevector_figure_canvas.get_tk_widget().pack(side=BOTTOM, padx=0, pady=0, fill="x", expand=True)
+
+		# statevector_axes = statevector_figure.add_subplot()
+		# statevector_axes.get_xaxis().set_visible(False)
+		# statevector_axes.get_yaxis().set_visible(False)
+		# statevector_axes.spines['top'].set_visible(False)
+		# statevector_axes.spines['right'].set_visible(False)
+		# statevector_axes.spines['bottom'].set_visible(False)
+		# statevector_axes.spines['left'].set_visible(False)
+		# statevector_axes.text(0, 0.5, statevector_latex, fontsize=16, ha="center", va="center")
 
 		main_menu_button = Button(self.window, text="Main Menu", command=self.load_main_menu, font=DEFAULT_FONT, width=18, height=1)
-		main_menu_button.pack(side=TOP, padx=10, pady=5)
+		main_menu_button.pack(side=TOP, padx=0, pady=0)
 
 		return True
-	
+
 	def show_continue_button(self):
 		output_button = Button(self.window, command=self.load_output, text="See output state vector!", font=DEFAULT_FONT, width=18, height=1)
 		output_button.pack(side=TOP, padx=10, pady=5)

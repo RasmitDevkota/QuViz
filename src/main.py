@@ -9,8 +9,6 @@ def main():
 
     gui.load_main_menu()
 
-    # gui.load_output()
-
     gui.window.mainloop()
 
     return 0

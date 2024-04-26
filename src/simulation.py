@@ -159,8 +159,8 @@ class Simulation:
 		self.gui.visualization_canvas.create_rectangle(*self.readout_zone_begin_viz, *self.readout_zone_end_viz, outline="darkturquoise")
 
 		# Physical parameters
-		self.T1_time = self.parameters["T1_time"]
-		self.T2_time = self.parameters["T2_time"]
+		self.T1 = self.parameters["T1"]
+		self.T2 = self.parameters["T2"]
 		self.atom_loss_pre = self.parameters["atom_loss_pre"]
 		self.atom_loss_post = self.parameters["atom_loss_post"]
 		self.measurement_fidelity = self.parameters["measurement_fidelity"]
@@ -233,26 +233,6 @@ class Simulation:
 		return True
 
 	# @TODO - Reformulate using Statevector
-	def prepare_qubit_states(self, target_qubits=[], initial_states=[]):
-		if len(target_qubits) == 0:
-			# Prepare all qubits
-			target_qubits = self.qubits
-
-		if len(initial_states) == 0:
-			# All (ideally) start in the 0 state
-			initial_states = [np.array([1+0j, 0+0j]) for q in range(self.n_qubits)]
-
-		for q in target_qubits:
-			initial_state_raw = initial_states[q]
-
-			# @TODO - Incorporate state preparation error
-			initial_state = initial_state_raw
-
-			self.qubits[q]["state"] = initial_state
-
-		return True
-
-	# @TODO - Reformulate using Statevector
 	def measure_qubits(self, qubits=[]):
 		# Loop through each qubit
 		for qubit in qubits:
@@ -274,11 +254,20 @@ class Simulation:
 	def prepare_qubit_widget(self, q, initial_position):
 		initial_position = initial_position/self.gui.viz_length_scale + self.gui.viz_offset_vector
 
-		qubit = self.gui.visualization_canvas.create_oval(initial_position[0] - self.gui.qubit_radius,
-			initial_position[1] - self.gui.qubit_radius,
-			initial_position[0] + self.gui.qubit_radius,
-			initial_position[1] + self.gui.qubit_radius,
-			fill="springgreen", outline="greenyellow", width=4, tag=(f"qubit{q}",))
+		if np.random.random() <= self.atom_loss_pre:
+			qubit_radius = max(1, self.gui.qubit_radius * 0.1)
+			fillcolor = self.gui.viz_background_color
+			outlinecolor = self.gui.viz_background_color
+		else:
+			qubit_radius = self.gui.qubit_radius
+			fillcolor = "springgreen"
+			outlinecolor="greenyellow"
+		
+		qubit = self.gui.visualization_canvas.create_oval(initial_position[0] - qubit_radius,
+			initial_position[1] - qubit_radius,
+			initial_position[0] + qubit_radius,
+			initial_position[1] + qubit_radius,
+			fill=fillcolor, outline=outlinecolor, width=4, tag=(f"qubit{q}",))
 
 		self.gui.visualization_canvas.create_text(initial_position[0], initial_position[1], text=q, fill="black", font=("Arial", 10), tag=(f"qubit{q}",))
 

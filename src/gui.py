@@ -30,6 +30,8 @@ class GUI:
 	def __init__(self, window_width=800, window_height=800):
 		self.window_width = window_width
 		self.window_height = window_height
+
+		self.viz_background_color = "black"
 		
 		self.viz_length_scale = 1E-6/5
 		self.viz_time_scale = 10E-6 * 1000
@@ -241,7 +243,7 @@ class GUI:
 		for circuit_instruction in decomposed_circuit.data:
 			instruction = circuit_instruction.operation
 			instruction_name = instruction.name.upper()
-			parameters = instruction.params
+			instruction_parameters = instruction.params
 			qubits = [qubit._index for qubit in circuit_instruction.qubits]
 			
 			# Create new layer if one of the qubits is already occupied in the current layer
@@ -253,7 +255,7 @@ class GUI:
 			
 			occupied_qubits.extend(qubits)
 			
-			circuit[-1].append({"instruction": instruction_name, "parameters": parameters, "qubits": qubits})
+			circuit[-1].append({"instruction": instruction_name, "parameters": instruction_parameters, "qubits": qubits})
 		
 		print(circuit)
 
@@ -331,7 +333,7 @@ class GUI:
 
 	def construct_visualization_canvas(self):
 		self.visualization_canvas = Canvas(self.window)
-		self.visualization_canvas.configure(bg="black")
+		self.visualization_canvas.configure(bg=self.viz_background_color)
 		self.visualization_canvas.pack(fill="both", expand=True)
 
 		return True

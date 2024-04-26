@@ -154,9 +154,9 @@ class Simulation:
 		self.readout_zone_begin_viz = self.readout_zone_begin/self.gui.viz_length_scale + self.gui.viz_offset_vector
 		self.readout_zone_end_viz = self.readout_zone_end/self.gui.viz_length_scale + self.gui.viz_offset_vector
 
-		self.gui.visualization_canvas.create_rectangle(*self.storage_zone_begin_viz, *self.storage_zone_end_viz, outline='purple')
-		self.gui.visualization_canvas.create_rectangle(*self.entanglement_zone_begin_viz, *self.entanglement_zone_end_viz, outline='salmon')
-		self.gui.visualization_canvas.create_rectangle(*self.readout_zone_begin_viz, *self.readout_zone_end_viz, outline='darkturquoise')
+		self.gui.visualization_canvas.create_rectangle(*self.storage_zone_begin_viz, *self.storage_zone_end_viz, outline="purple")
+		self.gui.visualization_canvas.create_rectangle(*self.entanglement_zone_begin_viz, *self.entanglement_zone_end_viz, outline="salmon")
+		self.gui.visualization_canvas.create_rectangle(*self.readout_zone_begin_viz, *self.readout_zone_end_viz, outline="darkturquoise")
 
 		# Physical parameters
 		self.T1_time = self.parameters["T1_time"]

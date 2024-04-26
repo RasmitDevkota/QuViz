@@ -14,6 +14,8 @@ from simulation import Simulation
 from qiskit import qasm3
 from qiskit.compiler import transpile
 from qiskit.quantum_info import Statevector
+from qiskit_aer import AerSimulator
+from qiskit_aer.noise import NoiseModel, thermal_relaxation_error
 
 GATE_DIMENSIONS = {
 	1: ["H", "X", "Y", "Z"],
@@ -60,23 +62,25 @@ class GUI:
 	def load_main_menu(self):
 		self.clear_frame()
 
-		header_label = Label(self.window, text="QuViz", font=("Arial", 36), width=20, height=10)
-		header_label.pack()
+		header_label = Label(self.window, text="QuViz", font=("Arial", 36))
+		header_label.place(relwidth=0.2, relheight=0.2, relx=0.4, rely=0.2)
 
-		experiment_designer_button = Button(self.window, command=self.load_qasm_editor, text="Experiment Designer", font=DEFAULT_FONT, width=18, height=1)
-		experiment_designer_button.pack(side=TOP, padx=10, pady=5)
+		experiment_designer_button = Button(self.window, command=self.load_qasm_editor, text="Experiment Designer", font=DEFAULT_FONT)
+		experiment_designer_button.place(relwidth=0.2, relheight=0.05, relx=0.4, rely=0.6)
 
 		return True
 
 	def load_qasm_editor(self):
 		self.clear_frame()
 
-		header_label = Label(self.window, text="OpenQASM3 Input", width=50, height=6, font=DEFAULT_FONT)
-		header_label.pack()
+		header_label = Label(self.window, text="OpenQASM3 Editor", font=DEFAULT_FONT)
+		header_label.place(relwidth=0.2, relheight=0.1, relx=0.4, rely=0.05)
 
-		qasm_frame = Frame(self.window, width=150, height=50, borderwidth=3, background="black")
-		qasm_frame.pack(side=TOP, fill="x", padx=500, pady=0)
+		qasm_frame = Frame(self.window, borderwidth=3, background="black")
+		# qasm_frame.place(side=TOP, fill="x", padx=500, pady=0)
+		qasm_frame.place(relwidth=0.6, relheight=0.65, relx=0.2, rely=0.15)
 
+		#############################################################################################
 		preamble_text = Text(qasm_frame, width=150, height=3, font=("Arial", 16), background="white")
 		preamble_text.insert(1.0, f"OPENQASM 3;\n\ninclude \"stdgates.inc\";")
 		preamble_text.configure(state="disabled", highlightthickness=0, borderwidth=0)
@@ -101,18 +105,19 @@ class GUI:
 		
 		self.qasm_text = Text(qasm_frame, undo=True, width=150, height=30, font=("Arial", 16), highlightthickness=0, borderwidth=0)
 		self.qasm_text.insert(1.0, f"// Your code starts here!")
-		self.qasm_text.pack(side=TOP, padx=0, pady=0)
+		self.qasm_text.pack(side=TOP, fill="both", expand=True, padx=0, pady=0)
+		#############################################################################################
 
-		compile_experiment_button = Button(self.window, command=self.compile_experiment, text="Compile Experiment", font=DEFAULT_FONT, width=18, height=1)
-		compile_experiment_button.pack(side=LEFT, padx=100, pady=0)
+		compile_experiment_button = Button(self.window, command=self.compile_experiment, text="Compile Experiment", font=DEFAULT_FONT)
+		compile_experiment_button.place(relwidth=0.15, relheight=0.05, relx=0.1, rely=0.85)
 
-		visualize_experiment_button = Button(self.window, command=self.load_visualizer, text="Visualize Experiment", font=DEFAULT_FONT, width=18, height=1)
-		visualize_experiment_button.pack(side=RIGHT, padx=100, pady=0)
+		visualize_experiment_button = Button(self.window, command=self.load_visualizer, text="Visualize Experiment", font=DEFAULT_FONT)
+		visualize_experiment_button.place(relwidth=0.15, relheight=0.05, relx=0.75, rely=0.85)
 
-		switch_type = Button(self.window, command=self.load_circuit_composer, text="Switch to Circuit Composer", font=DEFAULT_FONT, width=24, height=1)
-		switch_type.pack(padx=30, pady=30)
+		switch_type = Button(self.window, command=self.load_circuit_composer, text="Switch to Circuit Composer", font=DEFAULT_FONT)
+		switch_type.place(relwidth=0.2, relheight=0.05, relx=0.4, rely=0.85)
 
-		self.experiment_input_method = "OpenQASM3 Input"
+		self.experiment_input_method = "OpenQASM3 Editor"
 
 		return True
 	
@@ -124,22 +129,22 @@ class GUI:
 	def load_circuit_composer(self):
 		self.clear_frame()
 
-		header_label = Label(self.window, text="Circuit Composer", width=80, height=10, font=("Arial", 18))
-		header_label.pack()
+		header_label = Label(self.window, text="Circuit Composer", font=DEFAULT_FONT)
+		header_label.place(relwidth=0.2, relheight=0.1, relx=0.4, rely=0.05)
 
 		self.circuit_composer_frame = Frame(self.window)
-		self.circuit_composer_frame.pack()
+		self.circuit_composer_frame.place(relwidth=0.6, relheight=0.65, relx=0.2, rely=0.15)
 		
 		self.circuit_composer = CircuitComposer(self.circuit_composer_frame)
 
-		compile_experiment_button = Button(self.window, command=self.compile_experiment, text="Compile Experiment", font=DEFAULT_FONT, width=18, height=1)
-		compile_experiment_button.pack(side=LEFT, padx=30, pady=5)
+		compile_experiment_button = Button(self.window, command=self.compile_experiment, text="Compile Experiment", font=DEFAULT_FONT)
+		compile_experiment_button.place(relwidth=0.15, relheight=0.05, relx=0.1, rely=0.85)
 
-		visualize_experiment_button = Button(self.window, command=self.load_visualizer, text="Visualize Experiment", font=DEFAULT_FONT, width=18, height=1)
-		visualize_experiment_button.pack(side=RIGHT, padx=30, pady=5)
+		visualize_experiment_button = Button(self.window, command=self.load_visualizer, text="Visualize Experiment", font=DEFAULT_FONT)
+		visualize_experiment_button.place(relwidth=0.15, relheight=0.05, relx=0.75, rely=0.85)
 
-		switch_type = Button(self.window, command=self.load_qasm_editor, text="Switch to OpenQASM3 input", font=DEFAULT_FONT, width=24, height=1)
-		switch_type.pack(padx=30, pady=5)
+		switch_type = Button(self.window, command=self.load_qasm_editor, text="Switch to OpenQASM3 Editor", font=DEFAULT_FONT)
+		switch_type.place(relwidth=0.2, relheight=0.05, relx=0.4, rely=0.85)
 
 		self.experiment_input_method = "Circuit Composer"
 
@@ -147,7 +152,7 @@ class GUI:
 
 	def compile_experiment(self):
 		n_qubits = 0
-		if self.experiment_input_method == "OpenQASM3 Input":
+		if self.experiment_input_method == "OpenQASM3 Editor":
 			n_qubits_raw = self.qubit_count_var.get()
 
 			if n_qubits_raw.isdigit():
@@ -159,10 +164,13 @@ class GUI:
 			print("Cannot compile circuit with no wires!")
 			# @ TODO - Communicate compilation error (e.g. popup)
 			return False
+  
+		# @TODO - parse user input for experiment parameters
+		parameters = hardware_presets.DEFAULT
 		
 		# Parse circuit input into Qiskit QuantumCircuit
 		qasm_str = f"OPENQASM 3;\n\ninclude \"stdgates.inc\";\nqubit[{n_qubits}] qr;\n"
-		if self.experiment_input_method == "OpenQASM3 Input":
+		if self.experiment_input_method == "OpenQASM3 Editor":
 			qasm_str += self.qasm_text.get(1.0, "end-1c")
 		elif self.experiment_input_method == "Circuit Composer":
 			n_layers = self.circuit_composer.num_segments
@@ -211,9 +219,20 @@ class GUI:
 			print("Failed to compile OpenQASM3 input! Please check your syntax.")
 			return False
 		
-		basis_gates_choice = ["id", "u", "cz", "ccz", "cp"]
-		decomposed_circuit = transpile(original_circuit, basis_gates=basis_gates_choice, optimization_level=0)
-		decomposed_circuit.draw("mpl", filename="decomposed_circuit.png")
+		basis_gates = ["id", "u", "cz", "ccz", "cp"]
+
+		# @TODO - Implement errors for 
+		decoherence_error_id = thermal_relaxation_error(parameters["T1"],  parameters["T2"], 0/self.viz_time_scale)
+		decoherence_error_1q = thermal_relaxation_error(parameters["T1"],  parameters["T2"], 1/parameters["Omega2pi"]/self.viz_time_scale)
+
+		noise_model = NoiseModel(basis_gates=basis_gates)
+		noise_model.add_all_qubit_quantum_error(decoherence_error_id, ["id"])
+		noise_model.add_all_qubit_quantum_error(decoherence_error_1q, ["u"])
+
+		noisy_simulator = AerSimulator(noise_model=noise_model)
+
+		decomposed_circuit = transpile(original_circuit, noisy_simulator, basis_gates=basis_gates, optimization_level=0)
+		decomposed_circuit.draw("mpl", filename="images/decomposed_circuit.png")
 
 		circuit = []
 
@@ -237,9 +256,6 @@ class GUI:
 			circuit[-1].append({"instruction": instruction_name, "parameters": parameters, "qubits": qubits})
 		
 		print(circuit)
-  
-		# @TODO - parse user input for experiment parameters
-		parameters = hardware_presets.DEFAULT
 
 		current_experiment = {
 			"n_qubits": n_qubits,

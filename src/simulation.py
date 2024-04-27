@@ -1,19 +1,14 @@
 import numpy as np
 from threading import Lock
 import re
-
-import matplotlib
-from matplotlib.figure import Figure
-from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
-matplotlib.use('TkAgg')
+from PIL import ImageGrab
+import imageio
 
 from qiskit.quantum_info import Statevector
 
 class Simulation:
 	def __init__(self, experiment, gui):
 		# @TODO - load/store the other important variables that the user can give us
-
-		self.lock = Lock()
 
 		# GUI handler
 		self.gui = gui
@@ -28,10 +23,37 @@ class Simulation:
 		self.layer_deletion_lock = Lock()
 		self.layer_queue = []
 
+		self.frame_capture_lock = Lock()
+		self.frame = 0
+		self.frames = []
+
+	def capture_frame(self):
+		posx = self.gui.window.winfo_rootx()
+		posy = self.gui.window.winfo_rooty()
+		width = self.gui.window.winfo_width()
+		height = self.gui.window.winfo_height()
+
+		xi = posx
+		xf = posx + width
+		yi = posy
+		yf = posy + height
+
+		# @TODO - Implement true canvas capture instead of a regular screenshot (prone to issues)
+		img = ImageGrab.grab(bbox=(xi, yi, xf, yf))
+
+		self.frames.append(img)
+		self.frame += 1
+
+	def movie(self):
+		imageio.mimsave("movies/movie.gif", self.frames, fps=1)
+
 	def run_method_lambda(self, o, method_lambda):
+		print("running method lambda:", method_lambda)
+
 		method_lambda()
 
-		print("running method lambda:", method_lambda)
+		if self.frame_capture_lock.acquire(True):
+			self.capture_frame()
 
 		self.layer_queue[0][o] = None
 
@@ -43,6 +65,7 @@ class Simulation:
 					self.execute_next_layer()
 				else:
 					print("finished executing all layers!")
+					self.movie()
 					self.gui.show_continue_button()
 
 			self.layer_deletion_lock.release()
@@ -410,34 +433,6 @@ class Simulation:
 							"movement_velocity": self.max_transport_speed * np.array([1, 1])
 						}])
 
-						# # Offset
-						# self.transport_qubit_widget([{
-						# 	"qubit": self.qubits[rq]["widget"],
-						# 	"movement": np.array([self.transport_offset, self.transport_offset]),
-						# 	"movement_velocity": self.max_transport_speed * np.array([1, 1])
-						# }])
-
-						# # Move horizontally
-						# self.transport_qubit_widget([{
-						# 	"qubit": self.qubits[rq]["widget"],
-						# 	"movement": np.array([displacement_vector[0], 0]),
-						# 	"movement_velocity": self.max_transport_speed * np.array([1, 1])
-						# }])
-
-						# # Move vertically
-						# self.transport_qubit_widget([{
-						# 	"qubit": self.qubits[rq]["widget"],
-						# 	"movement": np.array([0, displacement_vector[1]]),
-						# 	"movement_velocity": self.max_transport_speed * np.array([1, 1])
-						# }])
-
-						# # Undo offset
-						# self.transport_qubit_widget([{
-						# 	"qubit": self.qubits[rq]["widget"],
-						# 	"movement": -1 * np.array([self.transport_offset, self.transport_offset]),
-						# 	"movement_velocity": self.max_transport_speed * np.array([1, 1])
-						# }])
-
 					entanglement_row = int(entanglement_site/self.sites_per_row_entanglement)
 
 					entanglement_position_center = np.array([entanglement_site * self.site_spacing_entanglement, entanglement_row * self.row_spacing_entanglement])
@@ -491,38 +486,6 @@ class Simulation:
 							"movement": -1 * np.array([self.transport_offset, self.transport_offset]),
 							"movement_velocity": self.max_transport_speed * np.array([1, 1])
 						}])
-
-					# # Offset
-					# for i, q in enumerate(transport_qubits):
-					# 	self.transport_qubit_widget([{
-					# 		"qubit": self.qubits[q]["widget"],
-					# 		"movement": np.array([transport_offset, transport_offset]),
-					# 		"movement_velocity": self.max_transport_speed * np.array([1, 1])
-					# 	}])
-
-					# # Move back horizontally
-					# for i, q in enumerate(transport_qubits):
-					# 	self.transport_qubit_widget([{
-					# 		"qubit": self.qubits[q]["widget"],
-					# 		"movement": -1 * np.array([displacement_vectors[i][0], 0]),
-					# 		"movement_velocity": L1_distances[i]/transport_duration
-					# 	}])
-
-					# # Move back vertically
-					# for i, q in enumerate(transport_qubits):
-					# 	self.transport_qubit_widget([{
-					# 		"qubit": self.qubits[q]["widget"],
-					# 		"movement": -1 * np.array([0, displacement_vectors[i][1]]),
-					# 		"movement_velocity": L1_distances[i]/transport_duration
-					# 	}])
-
-					# # Undo offset
-					# for i, q in enumerate(transport_qubits):
-					# 	self.transport_qubit_widget([{
-					# 		"qubit": self.qubits[q]["widget"],
-					# 		"movement": -1 * np.array([transport_offset, transport_offset]),
-					# 		"movement_velocity": self.max_transport_speed * np.array([1, 1])
-					# 	}])
 				else:
 					continue
 

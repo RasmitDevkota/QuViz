@@ -15,7 +15,10 @@ from qiskit import qasm3
 from qiskit.compiler import transpile
 from qiskit.quantum_info import Statevector
 from qiskit_aer import AerSimulator
+from qiskit.providers.fake_provider import GenericBackendV2
 from qiskit_aer.noise import NoiseModel, thermal_relaxation_error
+from qiskit.exceptions import QiskitError
+from qiskit.transpiler.exceptions import CircuitTooWideForTarget
 
 GATE_DIMENSIONS = {
 	1: ["H", "X", "Y", "Z"],
@@ -223,17 +226,25 @@ class GUI:
 		
 		basis_gates = ["id", "u", "cz", "ccz", "cp"]
 
-		# @TODO - Implement errors for 
+		# @TODO - Implement errors for multi-qubit gates
 		decoherence_error_id = thermal_relaxation_error(parameters["T1"],  parameters["T2"], 0/self.viz_time_scale)
 		decoherence_error_1q = thermal_relaxation_error(parameters["T1"],  parameters["T2"], 1/parameters["Omega2pi"]/self.viz_time_scale)
 
-		noise_model = NoiseModel(basis_gates=basis_gates)
-		noise_model.add_all_qubit_quantum_error(decoherence_error_id, ["id"])
-		noise_model.add_all_qubit_quantum_error(decoherence_error_1q, ["u"])
+		# @TODO - Implement Dynamical Decoupling
+		try:
+			noise_model = NoiseModel(basis_gates=basis_gates)
+			noise_model.add_all_qubit_quantum_error(decoherence_error_id, ["id"])
+			noise_model.add_all_qubit_quantum_error(decoherence_error_1q, ["u"])
 
-		noisy_simulator = AerSimulator(noise_model=noise_model)
+			backend = AerSimulator(noise_model=noise_model)
 
-		decomposed_circuit = transpile(original_circuit, noisy_simulator, basis_gates=basis_gates, optimization_level=0)
+			decomposed_circuit = transpile(original_circuit, backend, basis_gates=basis_gates, optimization_level=0)
+		except (CircuitTooWideForTarget, QiskitError):
+			backend = GenericBackendV2(num_qubits=n_qubits)
+
+			decomposed_circuit = transpile(original_circuit, backend, basis_gates=basis_gates, optimization_level=0)
+
+		# @TODO - Save graphics in a more useful location
 		decomposed_circuit.draw("mpl", filename="images/decomposed_circuit.png")
 
 		circuit = []
@@ -299,11 +310,12 @@ class GUI:
 		circuit_figure_canvas.get_tk_widget().pack(side=TOP, padx=0, pady=0, fill="x", expand=True)
 
 		# Display final statevector
-		statevector_latex = Statevector(self.temporaryStorage["current_experiment"]["qiskit_circuit"]).draw("latex_source")
-		statevector_plaintext = statevector_latex.replace("\\rangle", "⟩").replace("\\frac", "").replace("\\sqrt", "sqrt").replace("}{", "/").replace("{", "").replace("}", "").replace("+", " + ")
+		if self.temporaryStorage["current_experiment"]["n_qubits"] <= 16:
+			statevector_latex = Statevector(self.temporaryStorage["current_experiment"]["qiskit_circuit"]).draw("latex_source")
+			statevector_plaintext = statevector_latex.replace("\\rangle", "⟩").replace("\\frac", "").replace("\\sqrt", "sqrt").replace("}{", "/").replace("{", "").replace("}", "").replace("+", " + ")
 
-		statevector_label = Label(output_frame, text="Final statevector: " + statevector_plaintext, width=50, height=1, font=DEFAULT_FONT)
-		statevector_label.pack(side=BOTTOM, padx=0, pady=0, fill="x", expand=True)
+			statevector_label = Label(output_frame, text="Final statevector: " + statevector_plaintext, width=50, height=1, font=DEFAULT_FONT)
+			statevector_label.pack(side=BOTTOM, padx=0, pady=0, fill="x", expand=True)
 		
 		# statevector_figure = Figure(figsize=(5, 1), dpi=100, frameon=False)
 		# statevector_figure.patch.set_visible(False)
@@ -326,7 +338,7 @@ class GUI:
 		return True
 
 	def show_continue_button(self):
-		output_button = Button(self.window, command=self.load_output, text="See output state vector!", font=DEFAULT_FONT, width=18, height=1)
+		output_button = Button(self.window, command=self.load_output, text="Continue to output", font=DEFAULT_FONT, width=18, height=1)
 		output_button.pack(side=TOP, padx=10, pady=5)
 
 		return True

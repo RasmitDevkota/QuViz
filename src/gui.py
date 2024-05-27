@@ -16,7 +16,7 @@ from qiskit.compiler import transpile
 from qiskit.quantum_info import Statevector
 from qiskit_aer import AerSimulator
 from qiskit.providers.fake_provider import GenericBackendV2
-from qiskit_aer.noise import NoiseModel, thermal_relaxation_error
+from qiskit_aer.noise import NoiseModel, pauli_error, thermal_relaxation_error
 from qiskit.exceptions import QiskitError
 from qiskit.transpiler.exceptions import CircuitTooWideForTarget
 
@@ -156,6 +156,8 @@ class GUI:
 		return True
 
 	def compile_experiment(self):
+		qubit_mode = "physical"
+		
 		n_qubits = 0
 		if self.experiment_input_method == "OpenQASM3 Editor":
 			n_qubits_raw = self.qubit_count_var.get()
@@ -224,17 +226,32 @@ class GUI:
 			print("Failed to compile OpenQASM3 input! Please check your syntax.")
 			return False
 		
+		# @TODO - Implement Dynamical Decoupling
+  
 		basis_gates = ["id", "u", "cz", "ccz", "cp"]
 
 		# @TODO - Implement errors for multi-qubit gates
-		decoherence_error_id = thermal_relaxation_error(parameters["T1"],  parameters["T2"], 0/self.viz_time_scale)
-		decoherence_error_1q = thermal_relaxation_error(parameters["T1"],  parameters["T2"], 1/parameters["Omega2pi"]/self.viz_time_scale)
+		pauli_error_x_cz = pauli_error([("X", parameters["Pauli_error_X_CZ"]), ("I", 1 - parameters["Pauli_error_X_CZ"])])
+		pauli_error_x_cz = pauli_error_x_cz.tensor(pauli_error_x_cz)
+		pauli_error_y_cz = pauli_error([("Y", parameters["Pauli_error_Y_CZ"]), ("I", 1 - parameters["Pauli_error_Y_CZ"])])
+		pauli_error_y_cz = pauli_error_y_cz.tensor(pauli_error_y_cz)
+		pauli_error_z_cz = pauli_error([("Z", parameters["Pauli_error_Z_CZ"]), ("I", 1 - parameters["Pauli_error_Z_CZ"])])
+		pauli_error_z_cz = pauli_error_z_cz.tensor(pauli_error_z_cz)
 
-		# @TODO - Implement Dynamical Decoupling
+		decoherence_error_id = thermal_relaxation_error(parameters["T1"],  parameters["T2"], 0)
+		decoherence_error_1q = thermal_relaxation_error(parameters["T1"],  parameters["T2"], 1/parameters["Omega2pi"]/self.viz_time_scale)
+		decoherence_error_2q = decoherence_error_1q.tensor(decoherence_error_1q)
+		decoherence_error_3q = decoherence_error_2q.tensor(decoherence_error_1q)
+
 		try:
 			noise_model = NoiseModel(basis_gates=basis_gates)
+			noise_model.add_all_qubit_quantum_error(pauli_error_x_cz, ["cz"])
+			noise_model.add_all_qubit_quantum_error(pauli_error_y_cz, ["cz"])
+			noise_model.add_all_qubit_quantum_error(pauli_error_z_cz, ["cz"])
 			noise_model.add_all_qubit_quantum_error(decoherence_error_id, ["id"])
 			noise_model.add_all_qubit_quantum_error(decoherence_error_1q, ["u"])
+			noise_model.add_all_qubit_quantum_error(decoherence_error_2q, ["u"])
+			noise_model.add_all_qubit_quantum_error(decoherence_error_3q, ["u"])
 
 			backend = AerSimulator(noise_model=noise_model)
 
@@ -271,6 +288,7 @@ class GUI:
 		print(circuit)
 
 		current_experiment = {
+			"qubit_mode": qubit_mode,
 			"n_qubits": n_qubits,
 			"circuit": circuit,
 			"qiskit_circuit": decomposed_circuit,

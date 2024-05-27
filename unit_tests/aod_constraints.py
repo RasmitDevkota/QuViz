@@ -1,5 +1,5 @@
 import numpy as np
-
+import networkx as nx
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
 
@@ -24,7 +24,7 @@ assert(orientation_str(1) == "more positive than")
 ##############################################################
 
 # Enumerating particle positions
-setting = "random"
+setting = "manual"
 
 if setting == "random":
     # Random positions
@@ -81,29 +81,91 @@ elif setting == "manual":
     n_movements = len(positions)
     step_size = 0.5
 
+movements = [np.array(positions[i+1]) - np.array(positions[i]) for i in range(n_movements - 1)]
+
+print(movements)
+
+# return
+
 ##############################################################
 
-# Check for row/column crossings
-n_conflicts = 0
-for i in range(len(positions) - 1):
-    for p in range(n_particles - 1):
-        for q in range(p+1, n_particles):
-            for c in [0, 1]:
-                orientation_before = sign(positions[i][p][c] - positions[i][q][c])
-                orientation_after = sign(positions[i+1][p][c] - positions[i+1][q][c])
+def find_conflicts():
+    n_conflicts = 0
+    for i in range(len(positions) - 1):
+        for p in range(n_particles - 1):
+            for q in range(p+1, n_particles):
+                for c in [0, 1]:
+                    orientation_before = sign(positions[i][p][c] - positions[i][q][c])
+                    orientation_after = sign(positions[i+1][p][c] - positions[i+1][q][c])
 
-                axis_str = "x" if c == 0 else "y"
-                ob_str = "more positive than" if orientation_before == 1 else "less positive than" if orientation_before == -1 else "adjacent to"
-                oa_str = "more positive than" if orientation_after == 1 else "less positive than" if orientation_after == -1 else "adjacent to"
+                    axis_str = "x" if c == 0 else "y"
+                    ob_str = "more positive than" if orientation_before == 1 else "less positive than" if orientation_before == -1 else "adjacent to"
+                    oa_str = "more positive than" if orientation_after == 1 else "less positive than" if orientation_after == -1 else "adjacent to"
 
-                print(f"frame {i}: {p} is {ob_str} {q} along {axis_str}, afterwards it is {oa_str} {q}")
+                    print(f"frame {i}: {p} is {ob_str} {q} along {axis_str}, afterwards it is {oa_str} {q}")
 
-                if orientation_before != orientation_after:
-                    print(f"conflict from frame {i} to frame {i+1}!")
-                    n_conflicts += 1
+                    if orientation_before != orientation_after:
+                        print(f"conflict from frame {i} to frame {i+1}!")
+                        n_conflicts += 1
 
-badness = n_conflicts/(n_movements * n_particles * 2)
-print(f"{n_conflicts} conflicts found, badness score {badness} conflicts per movement/particle/dimension")
+    badness = n_conflicts/(n_movements * n_particles * 2)
+    return n_conflicts, badness
+
+def correct_conflicts():
+    n_conflicts = 0
+    corrected_movements = []
+
+    corrected_movements.append(positions[0])
+
+    for i in range(len(positions) - 1):
+        conflicts = []
+        corrected_movements.append([])
+
+        for p in range(n_particles - 1):
+            for q in range(p+1, n_particles):
+                needs_correction = False
+
+                for c in [0, 1]:
+                    orientation_before = sign(positions[i][p][c] - positions[i][q][c])
+                    orientation_after = sign(positions[i+1][p][c] - positions[i+1][q][c])
+
+                    axis_str = "x" if c == 0 else "y"
+                    ob_str = "more positive than" if orientation_before == 1 else "less positive than" if orientation_before == -1 else "adjacent to"
+                    oa_str = "more positive than" if orientation_after == 1 else "less positive than" if orientation_after == -1 else "adjacent to"
+
+                    print(f"frame {i}: {p} is {ob_str} {q} along {axis_str}, afterwards it is {oa_str} {q}")
+
+                    if orientation_before != orientation_after:
+                        print(f"conflict from frame {i} to frame {i+1}!")
+                        n_conflicts += 1
+
+                        needs_correction = True
+                
+                if needs_correction:
+                    conflicts.append([i, p, q])
+                    
+                    for _ in range(p, n_particles):
+                        corrected_movements[-1].append(np.array([0, 0]))
+                    
+                    corrected_movements.append([])
+
+                    corrected_movements[-1].append(movements[i][p])
+                else:
+                    corrected_movements[-1].append(movements[i][p])
+
+    badness = n_conflicts/(n_movements * n_particles * 2)
+    return n_conflicts, badness
+
+# Check for row/column crossings pre-correction
+n_conflicts_pre, badness_pre = find_conflicts()
+print(f"before correction: {n_conflicts_pre} conflicts found (badness score {badness_pre} conflicts per movement/particle/dimension)")
+
+# Correct!
+
+
+# Check for row/column crossings post-correction
+n_conflicts_post, badness_post = find_conflicts()
+print(f"after correction: {n_conflicts_post} conflicts found (badness score {badness_post} conflicts per movement/particle/dimension)")
 
 ##############################################################
 

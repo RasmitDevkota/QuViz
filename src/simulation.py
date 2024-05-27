@@ -24,7 +24,6 @@ class Simulation:
 		self.layer_queue = []
 
 		self.frame_capture_lock = Lock()
-		self.frame = 0
 		self.frames = []
 
 	def capture_frame(self):
@@ -42,10 +41,14 @@ class Simulation:
 		img = ImageGrab.grab(bbox=(xi, yi, xf, yf))
 
 		self.frames.append(img)
-		self.frame += 1
 
 	def movie(self):
-		imageio.mimsave("movies/movie.gif", self.frames, fps=1)
+		print("compiling movie.gif...")
+
+		print(f"frame count: {len(self.frames)}, fps={10}, movie duration: {len(self.frames)/10}")
+		imageio.mimsave("movies/movie.gif", self.frames, fps=10)
+		
+		print("finished compiling movie.gif!")
 
 	def run_method_lambda(self, o, method_lambda):
 		print("running method lambda:", method_lambda)
@@ -54,6 +57,8 @@ class Simulation:
 
 		if self.frame_capture_lock.acquire(True):
 			self.capture_frame()
+
+			self.frame_capture_lock.release()
 
 		self.layer_queue[0][o] = None
 
@@ -71,7 +76,7 @@ class Simulation:
 			self.layer_deletion_lock.release()
 
 	def schedule_operation(self, _o, _method_lambda, delay):
-		self.gui.window.after(delay * 1000, lambda o=_o, method_lambda=_method_lambda : self.run_method_lambda(o, method_lambda))
+		self.gui.window.after(delay * 500, lambda o=_o, method_lambda=_method_lambda : self.run_method_lambda(o, method_lambda))
 		return True
 
 	def push_operation(self, _method_lambda, _delay):
@@ -105,6 +110,12 @@ class Simulation:
 	def load_experiment(self, experiment = None):
 		# @TODO - Verify experiment (e.g. cannot have more qubits than storage sites)
 
+		# Logical vs. physical qubit mode
+		self.qubit_mode = experiment["qubit_mode"]
+
+		if self.qubit_mode == "logical":
+			self.gui.qubit_radius = 0.25E-6/self.gui.viz_length_scale
+		
 		self.n_qubits = experiment["n_qubits"]
 		self.qubits = []
 
@@ -182,6 +193,8 @@ class Simulation:
 		self.gui.visualization_canvas.create_rectangle(*self.readout_zone_begin_viz, *self.readout_zone_end_viz, outline="darkturquoise")
 
 		# Physical parameters
+		self.delta_x = self.parameters["delta_x"]
+		self.delta_y = self.parameters["delta_y"]
 		self.T1 = self.parameters["T1"]
 		self.T2 = self.parameters["T2"]
 		self.atom_loss_pre = self.parameters["atom_loss_pre"]
@@ -226,25 +239,18 @@ class Simulation:
 					position_site = j * self.site_spacing_storage
 
 					initial_position = np.array([position_site, position_row]) + self.storage_zone_begin + self.zone_padding
-
 					initial_positions.append(initial_position)
 
 					sites_filled += 1
-
 					if sites_filled >= len(target_qubits):
 						break
 				else:
 					continue
 
-				break
-
 		for i, tq in enumerate(target_qubits):
 			initial_position_raw = initial_positions[i]
-
 			initial_position = initial_position_raw + np.array([np.random.normal(scale=self.parameters["delta_x"]), np.random.normal(scale=self.parameters["delta_y"])])
-
 			delta_position = initial_position - self.qubits[tq]["position"]
-
 			self.qubits[tq]["position"] = initial_position
 
 			self.transport_qubit_widget([{
@@ -275,37 +281,71 @@ class Simulation:
 		return True
 
 	def prepare_qubit_widget(self, q, initial_position):
-		initial_position = initial_position/self.gui.viz_length_scale + self.gui.viz_offset_vector
+		n_physical_qubits = 1
+		offsets = []
 
-		if np.random.random() <= self.atom_loss_pre:
-			qubit_radius = max(1, self.gui.qubit_radius * 0.1)
-			fillcolor = self.gui.viz_background_color
-			outlinecolor = self.gui.viz_background_color
+		if self.qubit_mode == "logical":
+			# @TODO - Support other logical codes
+
+			# Prepare 7 physical qubits for the Steane [[7,1,3]] code
+			n_physical_qubits = 7
+			offsets = [
+				np.array([0, 0]),
+				np.array([1, -1]),
+				np.array([-1, 0]),
+				np.array([1, 0]),
+				np.array([-1, 1]),
+				np.array([0, 1]),
+				np.array([1, 1]),
+			]
 		else:
-			qubit_radius = self.gui.qubit_radius
-			fillcolor = "springgreen"
-			outlinecolor="greenyellow"
+			n_physical_qubits = 1
+			offsets = [np.array([0, 0])]
 		
-		qubit = self.gui.visualization_canvas.create_oval(initial_position[0] - qubit_radius,
-			initial_position[1] - qubit_radius,
-			initial_position[0] + qubit_radius,
-			initial_position[1] + qubit_radius,
-			fill=fillcolor, outline=outlinecolor, width=4, tag=(f"qubit{q}",))
+		center_qubit = None
 
-		self.gui.visualization_canvas.create_text(initial_position[0], initial_position[1], text=q, fill="black", font=("Arial", 10), tag=(f"qubit{q}",))
+		for p in range(n_physical_qubits):
+			if np.random.random() <= self.atom_loss_pre:
+				qubit_radius = max(1, self.gui.qubit_radius * 0.1)
+				fillcolor = self.gui.viz_background_color
+				outlinecolor = self.gui.viz_background_color
+			else:
+				qubit_radius = self.gui.qubit_radius
+				fillcolor = "springgreen"
+				outlinecolor = "greenyellow"
+			
+			physical_qubit_position = initial_position + offsets[p] * self.gui.qubit_radius * self.gui.viz_length_scale * 6
+			qubit_widget_position = physical_qubit_position/self.gui.viz_length_scale + self.gui.viz_offset_vector
 
-		return qubit
+			print(qubit_widget_position)
+			
+			qubit = self.gui.visualization_canvas.create_oval(qubit_widget_position[0] - qubit_radius,
+				qubit_widget_position[1] - qubit_radius,
+				qubit_widget_position[0] + qubit_radius,
+				qubit_widget_position[1] + qubit_radius,
+				fill=fillcolor, outline=outlinecolor, width=4, tag=(f"qubit{q}",))
+
+			if self.qubit_mode == "physical":
+				self.gui.visualization_canvas.create_text(qubit_widget_position[0], qubit_widget_position[1], text=q, fill="black", font=("Arial", 10), tag=(f"qubit{q}",))
+			
+			if p == 0:
+				center_qubit = qubit
+
+		return center_qubit
 
 	def transport_qubit_widget(self, movements):
-		# @TODO - Solve speed scale issues
 		offset = 0
 		for m, movement in enumerate(movements):
-			total_movement_vector = movement["movement"]/self.gui.viz_length_scale
+			total_movement_vector = movement["movement"]
+			total_movement_vector += np.array([np.random.random() * self.delta_x, np.random.random() * self.delta_y])
+			total_movement_vector /= self.gui.viz_length_scale
+
 			total_movement_distance = np.linalg.norm(total_movement_vector)
 
 			if total_movement_distance == 0:
 				continue
 
+			# @TODO - Solve speed scale issues
 			# movement_speed = np.linalg.norm(movement["movement_velocity"])
 			movement_speed = np.linalg.norm(self.max_transport_speed)
 			time_needed = total_movement_distance/movement_speed
@@ -334,6 +374,8 @@ class Simulation:
 		return True
 
 	def compile_experiment(self, experiment=None):
+		print("compiling experiment...")
+
 		self.entanglement_sites = [[] for _ in range(self.n_rows_entanglement * self.sites_per_row_entanglement)]
 
 		if experiment:
@@ -346,7 +388,6 @@ class Simulation:
 			self.layer_queue.append([])
 			self.layer_op_counter = 0
 
-			# @TODO - Move qubit back to storage zone before performing single-qubit gates
 			for operation in layer:
 				if operation["instruction"] in ["H", "S", "Sdg", "T", "RX", "RY", "RZ", "X", "Y", "Z"]:
 					# Move qubit back to storage zone before performing single-qubit gate
@@ -441,6 +482,7 @@ class Simulation:
 					displacement_vectors = []
 					angular_separation = 2 * np.pi/len(transport_qubits)
 					for i, q in enumerate(transport_qubits):
+						# Destinations are placed along a unit circle with qubits evenly-distributed
 						blockade_position = self.rydberg_blockade_radius * np.array([-np.cos(i * angular_separation), np.sin(i * angular_separation)])
 						entanglement_position_relative = entanglement_position_center + blockade_position
 						new_qubit_position = self.entanglement_zone_begin + self.zone_padding + entanglement_position_relative

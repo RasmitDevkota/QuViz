@@ -168,8 +168,8 @@ class GUI:
 			n_qubits = len(self.circuit_composer.wires)
 		
 		if n_qubits == 0:
-			print("Cannot compile circuit with no wires!")
 			# @ TODO - Communicate compilation error (e.g. popup)
+			print("Cannot compile circuit with no wires!")
 			return False
   
 		# @TODO - parse user input for experiment parameters
@@ -197,7 +197,7 @@ class GUI:
 
 						instruction_name = gate_info.split("|")[0]
 
-						parameters = gate_info.split("|")[1].split(",")
+						instruction_parameters = gate_info.split("|")[1].split(",")
 
 						start_qubit = int(gate_info.split("|")[2].split(":")[0])
 						stop_qubit = int(gate_info.split("|")[2].split(":")[1].split(",")[0])+1
@@ -205,9 +205,9 @@ class GUI:
 
 						qasm_line = f"{instruction_name}"
 
-						if parameters[0] != "":
-							parameters = ",".join(parameters)
-							qasm_line += f"({parameters})"
+						if instruction_parameters[0] != "":
+							instruction_parameters = ",".join(instruction_parameters)
+							qasm_line += f"({instruction_parameters})"
 
 						for qubit in qubits:
 							qasm_line += f" qr[{qubit}],"

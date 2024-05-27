@@ -2,6 +2,7 @@ import numpy as np
 import re
 
 from tkinter import *
+from tkinter.messagebox import *
 
 import matplotlib
 from matplotlib.figure import Figure
@@ -168,8 +169,8 @@ class GUI:
 			n_qubits = len(self.circuit_composer.wires)
 		
 		if n_qubits == 0:
-			# @ TODO - Communicate compilation error (e.g. popup)
-			print("Cannot compile circuit with no wires!")
+			print("Cannot compile experiment with no qubits!")
+			showerror("Compilation error", "Cannot compile experiment with no qubits!")
 			return False
   
 		# @TODO - parse user input for experiment parameters
@@ -222,8 +223,8 @@ class GUI:
 		try:
 			original_circuit = qasm3.loads(qasm_str)
 		except qasm3.QASM3ImporterError:
-			# @ TODO - Communicate compilation error (e.g. popup)
 			print("Failed to compile OpenQASM3 input! Please check your syntax.")
+			showerror("Compilation error", "Failed to compile OpenQASM3 input! Please check your syntax.")
 			return False
 		
 		# @TODO - Implement Dynamical Decoupling

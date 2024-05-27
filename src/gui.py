@@ -422,10 +422,20 @@ class CircuitComposer:
 
 	def draw_gate_buttons(self):
 		gates = ["H", "X", "Y", "Z", "CX", "CY", "CZ", "CP", "CCZ"]
+		gate_widget_width = min(round(1/len(gates), 3), 0.1)
+		gate_widget_height = 0.075
+		gate_widget_padding_x = 0.1 * gate_widget_width
+		gate_widget_padding_y = 0.1 * gate_widget_height
 		self.buttons = []
-		for gate in gates:
-			button = Button(self.master, text=gate, command=lambda g=gate: self.select_gate(g))
-			button.pack(side=TOP, padx=10, pady=5, fill=X)
+		for g, gate in enumerate(gates):
+			button = Button(self.master, text=gate, font=CIRCUIT_COMPOSER_FONT, command=lambda g=gate: self.select_gate(g))
+			button.place(
+				relwidth=gate_widget_width,
+				relheight=gate_widget_height,
+				relx=gate_widget_width*(g)+gate_widget_padding_x*(g+1),
+				rely=1-gate_widget_height-gate_widget_padding_y
+			)
+
 			self.buttons.append(button)
 
 		# add_wire_button = Button(self.master, text="Add Wire", command=self.add_wire)

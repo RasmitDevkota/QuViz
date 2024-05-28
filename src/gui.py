@@ -49,6 +49,8 @@ class GUI:
 
 		self.experiment_input_method = None
 
+		self.qubit_mode_button = None
+
 		self.qubit_count_entry = None
 		self.qasm_text = None
 
@@ -82,9 +84,11 @@ class GUI:
 		header_label = Label(self.window, text="OpenQASM3 Editor", font=DEFAULT_FONT)
 		header_label.place(relwidth=0.2, relheight=0.1, relx=0.4, rely=0.05)
 
+		self.qubit_mode_button = Button(self.window, command=self.switch_qubit_mode, text="Qubit Mode: Physical", font=DEFAULT_FONT)
+		self.qubit_mode_button.place(relwidth=0.2, relheight=0.05, relx=0.4, rely=0.13)
+
 		qasm_frame = Frame(self.window, borderwidth=3, background="black")
-		# qasm_frame.place(side=TOP, fill="x", padx=500, pady=0)
-		qasm_frame.place(relwidth=0.6, relheight=0.65, relx=0.2, rely=0.15)
+		qasm_frame.place(relwidth=0.6, relheight=0.65, relx=0.2, rely=0.2)
 
 		#############################################################################################
 		preamble_text = Text(qasm_frame, width=150, height=3, font=("Arial", 16), background="white")
@@ -115,13 +119,13 @@ class GUI:
 		#############################################################################################
 
 		compile_experiment_button = Button(self.window, command=self.compile_experiment, text="Compile Experiment", font=DEFAULT_FONT)
-		compile_experiment_button.place(relwidth=0.15, relheight=0.05, relx=0.1, rely=0.85)
+		compile_experiment_button.place(relwidth=0.15, relheight=0.05, relx=0.1, rely=0.9)
 
 		visualize_experiment_button = Button(self.window, command=self.load_visualizer, text="Visualize Experiment", font=DEFAULT_FONT)
-		visualize_experiment_button.place(relwidth=0.15, relheight=0.05, relx=0.75, rely=0.85)
+		visualize_experiment_button.place(relwidth=0.15, relheight=0.05, relx=0.75, rely=0.9)
 
 		switch_type = Button(self.window, command=self.load_circuit_composer, text="Switch to Circuit Composer", font=DEFAULT_FONT)
-		switch_type.place(relwidth=0.2, relheight=0.05, relx=0.4, rely=0.85)
+		switch_type.place(relwidth=0.2, relheight=0.05, relx=0.4, rely=0.9)
 
 		self.experiment_input_method = "OpenQASM3 Editor"
 
@@ -138,26 +142,37 @@ class GUI:
 		header_label = Label(self.window, text="Circuit Composer", font=DEFAULT_FONT)
 		header_label.place(relwidth=0.2, relheight=0.1, relx=0.4, rely=0.05)
 
+		self.qubit_mode_button = Button(self.window, command=self.switch_qubit_mode, text="Qubit Mode: Physical", font=DEFAULT_FONT)
+		self.qubit_mode_button.place(relwidth=0.2, relheight=0.05, relx=0.4, rely=0.13)
+
 		self.circuit_composer_frame = Frame(self.window)
-		self.circuit_composer_frame.place(relwidth=0.6, relheight=0.65, relx=0.2, rely=0.15)
+		self.circuit_composer_frame.place(relwidth=0.6, relheight=0.65, relx=0.2, rely=0.2)
 		
 		self.circuit_composer = CircuitComposer(self.circuit_composer_frame)
 
 		compile_experiment_button = Button(self.window, command=self.compile_experiment, text="Compile Experiment", font=DEFAULT_FONT)
-		compile_experiment_button.place(relwidth=0.15, relheight=0.05, relx=0.1, rely=0.85)
+		compile_experiment_button.place(relwidth=0.15, relheight=0.05, relx=0.1, rely=0.9)
 
 		visualize_experiment_button = Button(self.window, command=self.load_visualizer, text="Visualize Experiment", font=DEFAULT_FONT)
-		visualize_experiment_button.place(relwidth=0.15, relheight=0.05, relx=0.75, rely=0.85)
+		visualize_experiment_button.place(relwidth=0.15, relheight=0.05, relx=0.75, rely=0.9)
 
 		switch_type = Button(self.window, command=self.load_qasm_editor, text="Switch to OpenQASM3 Editor", font=DEFAULT_FONT)
-		switch_type.place(relwidth=0.2, relheight=0.05, relx=0.4, rely=0.85)
+		switch_type.place(relwidth=0.2, relheight=0.05, relx=0.4, rely=0.9)
 
 		self.experiment_input_method = "Circuit Composer"
 
 		return True
 
+	def switch_qubit_mode(self):
+		if "Physical" in self.qubit_mode_button.cget('text'):
+			self.qubit_mode_button.configure(text="Qubit Mode: Logical")
+		else:
+			self.qubit_mode_button.configure(text="Qubit Mode: Physical")
+
 	def compile_experiment(self):
-		qubit_mode = "physical"
+		qubit_mode = self.qubit_mode_button.cget('text').split(" ")[-1].lower()
+
+		print(qubit_mode)
 		
 		n_qubits = 0
 		if self.experiment_input_method == "OpenQASM3 Editor":

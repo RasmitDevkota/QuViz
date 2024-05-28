@@ -334,10 +334,8 @@ class Simulation:
 
 		return center_qubit
 
-	def transport_qubit_widget(self, movements):
-		# Break down movements into orthogonal vectors
-
-		offset = 0
+	def transport_qubit_widget(self, movements, base_offset=0):
+		offset = base_offset
 		for m, movement in enumerate(movements):
 			total_movement_vector = movement["movement"]
 			total_movement_vector += np.array([np.random.random() * self.delta_x, np.random.random() * self.delta_y])
@@ -366,7 +364,7 @@ class Simulation:
 			
 			offset += (steps_needed + 1)
 
-		return True
+		return offset
 
 	def expel_qubit_widget(self, qubit):
 		for qubit_widget_component in self.gui.visualization_canvas.gettags(qubit):
@@ -403,11 +401,23 @@ class Simulation:
 
 						self.qubits[rq]["position"] = new_qubit_position
 
-						self.transport_qubit_widget([{
-							"qubit": self.qubits[rq]["widget"],
-							"movement": displacement_vector,
-							"movement_velocity": self.max_transport_speed * np.array([1, 1])
-						}])
+						if displacement_vector[0] == 0 or displacement_vector[1] == 0:
+							self.transport_qubit_widget([{
+								"qubit": self.qubits[rq]["widget"],
+								"movement": displacement_vector,
+								"movement_velocity": self.max_transport_speed * np.array([1, 1])
+							}])
+						else:
+							offset_1 = self.transport_qubit_widget([{
+								"qubit": self.qubits[rq]["widget"],
+								"movement": [displacement_vector[0], 0],
+								"movement_velocity": self.max_transport_speed * np.array([1, 1])
+							}])
+							self.transport_qubit_widget([{
+								"qubit": self.qubits[rq]["widget"],
+								"movement": [0, displacement_vector[1]],
+								"movement_velocity": self.max_transport_speed * np.array([1, 1])
+							}], base_offset=offset_1)
 				elif re.match("^(C+Z|CP|PSCP)$", operation["instruction"].upper()):
 					transport_needed = True
 					site_needed = True
@@ -462,6 +472,7 @@ class Simulation:
 					self.entanglement_sites[entanglement_site] = transport_qubits
 
 					# Reset unneeded qubits before transporting new ones
+					offsets_0 = [0]
 					for rq in reset_qubits:
 						storage_site = rq % self.sites_per_row_storage
 						storage_row = int(rq/self.sites_per_row_storage)
@@ -471,11 +482,24 @@ class Simulation:
 
 						self.qubits[rq]["position"] = new_qubit_position
 
-						self.transport_qubit_widget([{
-							"qubit": self.qubits[rq]["widget"],
-							"movement": displacement_vector,
-							"movement_velocity": self.max_transport_speed * np.array([1, 1])
-						}])
+
+						if displacement_vector[0] == 0 or displacement_vector[1] == 0:
+							offsets_0.append(self.transport_qubit_widget([{
+								"qubit": self.qubits[rq]["widget"],
+								"movement": displacement_vector,
+								"movement_velocity": self.max_transport_speed * np.array([1, 1])
+							}]))
+						else:
+							offset_00 = self.transport_qubit_widget([{
+								"qubit": self.qubits[rq]["widget"],
+								"movement": [displacement_vector[0], 0],
+								"movement_velocity": self.max_transport_speed * np.array([1, 1])
+							}])
+							offsets_0.append(self.transport_qubit_widget([{
+								"qubit": self.qubits[rq]["widget"],
+								"movement": [0, displacement_vector[1]],
+								"movement_velocity": self.max_transport_speed * np.array([1, 1])
+							}], base_offset=offset_00))
 
 					entanglement_row = int(entanglement_site/self.sites_per_row_entanglement)
 
@@ -501,28 +525,31 @@ class Simulation:
 					transport_duration = max_distance/self.max_transport_speed
 
 					# Offset
+					offsets_1 = [0]
 					for i, q in enumerate(transport_qubits):
-						self.transport_qubit_widget([{
+						offsets_1.append(self.transport_qubit_widget([{
 							"qubit": self.qubits[q]["widget"],
 							"movement": np.array([self.transport_offset, self.transport_offset]),
 							"movement_velocity": self.max_transport_speed * np.array([1, 1])
-						}])
+						}], base_offset=max(offsets_0)))
 
 					# Move horizontally
+					offsets_2 = [0]
 					for i, q in enumerate(transport_qubits):
-						self.transport_qubit_widget([{
+						offsets_2.append(self.transport_qubit_widget([{
 							"qubit": self.qubits[q]["widget"],
 							"movement": np.array([displacement_vectors[i][0], 0]),
 							"movement_velocity": norms[i]/transport_duration
-						}])
+						}], base_offset=max(offsets_1)))
 
 					# Move vertically
+					offsets_3 = [0]
 					for i, q in enumerate(transport_qubits):
-						self.transport_qubit_widget([{
+						offsets_3.append(self.transport_qubit_widget([{
 							"qubit": self.qubits[q]["widget"],
 							"movement": np.array([0, displacement_vectors[i][1]]),
 							"movement_velocity": norms[i]/transport_duration
-						}])
+						}], base_offset=max(offsets_2)))
 
 					# Undo offset
 					for i, q in enumerate(transport_qubits):
@@ -530,7 +557,7 @@ class Simulation:
 							"qubit": self.qubits[q]["widget"],
 							"movement": -1 * np.array([self.transport_offset, self.transport_offset]),
 							"movement_velocity": self.max_transport_speed * np.array([1, 1])
-						}])
+						}], base_offset=max(offsets_3))
 				else:
 					continue
 

@@ -171,8 +171,6 @@ class GUI:
 
 	def compile_experiment(self):
 		qubit_mode = self.qubit_mode_button.cget('text').split(" ")[-1].lower()
-
-		print(qubit_mode)
 		
 		n_qubits = 0
 		if self.experiment_input_method == "OpenQASM3 Editor":
@@ -242,8 +240,6 @@ class GUI:
 			showerror("Compilation error", "Failed to compile OpenQASM3 input! Please check your syntax.")
 			return False
 		
-		# @TODO - Implement Dynamical Decoupling
-  
 		basis_gates = ["id", "u", "cz", "ccz", "cp"]
 
 		# @TODO - Implement errors for multi-qubit gates
@@ -301,6 +297,35 @@ class GUI:
 			
 			circuit[-1].append({"instruction": instruction_name, "parameters": instruction_parameters, "qubits": qubits})
 		
+		# Perform dynamical decoupling
+		occupied_qubits_list = []
+		for l, layer in enumerate(circuit):
+			occupied_qubits_list.append([])
+
+			for operation in layer:
+				occupied_qubits_list[l].extend(operation["qubits"])
+			
+			unoccupied_qubits = set(range(0, n_qubits)) - set(occupied_qubits_list[l])
+
+			if l > 0:
+				doubly_unoccupied_qubits = []
+				for unoccupied_qubit in unoccupied_qubits:
+					if unoccupied_qubit not in occupied_qubits_list[l-1]:
+						doubly_unoccupied_qubits.append(unoccupied_qubit)
+				
+				if len(doubly_unoccupied_qubits) > 0:
+					dynamical_decoupling_operation = {
+						"instruction": "U",
+						"parameters": [0, 0, np.pi],
+						"qubits": doubly_unoccupied_qubits
+					}
+							
+					circuit[l-1].append(dynamical_decoupling_operation)
+					circuit[l].append(dynamical_decoupling_operation)
+
+					occupied_qubits_list[l-1].extend(doubly_unoccupied_qubits)
+					occupied_qubits_list[l].extend(doubly_unoccupied_qubits)
+		
 		print(circuit)
 
 		current_experiment = {
@@ -316,18 +341,21 @@ class GUI:
 		return True
 
 	def load_visualizer(self):
-		self.compile_experiment()
+		compilation_result = self.compile_experiment()
 
-		self.clear_frame()
+		if compilation_result:
+			self.clear_frame()
 
-		self.construct_visualization_canvas()
+			self.construct_visualization_canvas()
 
-		current_experiment = self.temporaryStorage["current_experiment"]
-		simulation = Simulation(current_experiment, self)
-		simulation.compile_experiment()
-		simulation.run_experiment()
+			current_experiment = self.temporaryStorage["current_experiment"]
+			simulation = Simulation(current_experiment, self)
+			simulation.compile_experiment()
+			simulation.run_experiment()
 
-		return True
+			return True
+		else:
+			return False
 	
 	def load_output(self):
 		self.clear_frame()

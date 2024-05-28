@@ -21,7 +21,7 @@ DEFAULT = {
     "site_spacing_storage": 10E-6,#5.5E-6,
     # Transport parameters
     "transport_offset": 1E-6,
-    "max_transport_speed": 100 * 0.725E-6/1E-6,
+    "max_transport_speed": 50 * 0.725E-6/1E-6,
     "min_transport_speed": 0.25E-6/1E-6,
     # Physical parameters
     "Omega2pi": 4.6E6,

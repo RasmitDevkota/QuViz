@@ -1,5 +1,5 @@
 import numpy as np
-from threading import Lock
+from threading import Thread, Lock
 import re
 from PIL import ImageGrab
 import imageio
@@ -37,7 +37,7 @@ class Simulation:
 		yi = posy
 		yf = posy + height
 
-		# @TODO - Implement true canvas capture instead of a regular screenshot (prone to issues)
+		# @TODO - Implement true canvas capture instead of a regular screenshot (prone to issues, especially when user changes windows)
 		img = ImageGrab.grab(bbox=(xi, yi, xf, yf))
 
 		self.frames.append(img)
@@ -70,7 +70,8 @@ class Simulation:
 					self.execute_next_layer()
 				else:
 					print("finished executing all layers!")
-					self.movie()
+					movie_thread = Thread(target=self.movie)
+					movie_thread.start()
 					self.gui.show_continue_button()
 
 			self.layer_deletion_lock.release()
@@ -80,7 +81,7 @@ class Simulation:
 		return True
 
 	def push_operation(self, _method_lambda, _delay):
-		self.layer_queue[-1].append(lambda layer_op_counter=self.layer_op_counter, method_lambda=_method_lambda, delay=_delay: self.schedule_operation(layer_op_counter, method_lambda, delay))
+		self.layer_queue[-1].append(lambda layer_op_counter=self.layer_op_counter, method_lambda=_method_lambda, delay=_delay : self.schedule_operation(layer_op_counter, method_lambda, delay))
 		self.layer_op_counter += 1
 
 	def execute_next_layer(self):
@@ -334,6 +335,8 @@ class Simulation:
 		return center_qubit
 
 	def transport_qubit_widget(self, movements):
+		# Break down movements into orthogonal vectors
+
 		offset = 0
 		for m, movement in enumerate(movements):
 			total_movement_vector = movement["movement"]
@@ -359,7 +362,7 @@ class Simulation:
 				for qubit_widget_component in self.gui.visualization_canvas.gettags(movement["qubit"]):
 					method_lambda = lambda : self.gui.visualization_canvas.move(qubit_widget_component, *step_movement_vector)
 
-					self.push_operation(method_lambda, self.gui.movement_step_time * (offset + step + 1))
+					self.push_operation(method_lambda, max(1, int(self.gui.movement_step_time * (offset + step + 1))))
 			
 			offset += (steps_needed + 1)
 
@@ -389,7 +392,7 @@ class Simulation:
 			self.layer_op_counter = 0
 
 			for operation in layer:
-				if operation["instruction"] in ["H", "S", "Sdg", "T", "RX", "RY", "RZ", "X", "Y", "Z"]:
+				if operation["instruction"].upper() in ["H", "S", "Sdg", "T", "RX", "RY", "RZ", "X", "Y", "Z"]:
 					# Move qubit back to storage zone before performing single-qubit gate
 					for rq in operation["qubits"]:
 						storage_site = rq % self.sites_per_row_storage
@@ -405,7 +408,7 @@ class Simulation:
 							"movement": displacement_vector,
 							"movement_velocity": self.max_transport_speed * np.array([1, 1])
 						}])
-				elif re.match("^(C+Z|CP|PSCP)$", operation["instruction"]):
+				elif re.match("^(C+Z|CP|PSCP)$", operation["instruction"].upper()):
 					transport_needed = True
 					site_needed = True
 

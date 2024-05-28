@@ -190,7 +190,7 @@ class GUI:
 		parameters = hardware_presets.DEFAULT
 		
 		# Parse circuit input into Qiskit QuantumCircuit
-		qasm_str = f"OPENQASM 3;\n\ninclude \"stdgates.inc\";\nqubit[{n_qubits}] qr;\n"
+		qasm_str = f"OPENQASM 3;\n\ninclude \"stdgates.inc\";\nqubit[{n_qubits}] qr;\ngate ccz q0,q1,q2 {{ h q2; ccx q0,q1,q2; h q2; }}\n"
 		if self.experiment_input_method == "OpenQASM3 Editor":
 			qasm_str += self.qasm_text.get(1.0, "end-1c")
 		elif self.experiment_input_method == "Circuit Composer":

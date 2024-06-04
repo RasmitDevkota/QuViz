@@ -23,6 +23,7 @@ class Simulation:
 		self.layer_deletion_lock = Lock()
 		self.layer_queue = []
 
+		self.capture_frames = True
 		self.frame_capture_lock = Lock()
 		self.frames = []
 
@@ -38,9 +39,11 @@ class Simulation:
 		yf = posy + height
 
 		# @TODO - Implement true canvas capture instead of a regular screenshot (prone to issues, especially when user changes windows)
-		img = ImageGrab.grab(bbox=(xi, yi, xf, yf))
-
-		self.frames.append(img)
+		try:
+			img = ImageGrab.grab(bbox=(xi, yi, xf, yf))
+			self.frames.append(img)
+		except:
+			self.capture_frames = False
 
 	def movie(self):
 		print("compiling movie.gif...")
@@ -55,7 +58,7 @@ class Simulation:
 
 		method_lambda()
 
-		if self.frame_capture_lock.acquire(True):
+		if self.capture_frames and self.frame_capture_lock.acquire(True):
 			self.capture_frame()
 
 			self.frame_capture_lock.release()
@@ -70,8 +73,11 @@ class Simulation:
 					self.execute_next_layer()
 				else:
 					print("finished executing all layers!")
-					movie_thread = Thread(target=self.movie)
-					movie_thread.start()
+
+					if self.capture_frames:
+						movie_thread = Thread(target=self.movie)
+						movie_thread.start()
+					
 					self.gui.show_continue_button()
 
 			self.layer_deletion_lock.release()
